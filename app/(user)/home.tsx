@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, MapPin, Star, Heart, SlidersHorizontal, User as UserIcon } from 'lucide-react-native';
+import { useProperty } from '@/contexts/PropertyContext';
 
-const properties = [
+const oldProperties = [
   {
     id: '1',
     name: 'Luxury Beach Resort',
@@ -120,6 +121,7 @@ const properties = [
 
 export default function UserHomeScreen() {
   const router = useRouter();
+  const { properties } = useProperty();
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
 
@@ -186,7 +188,7 @@ export default function UserHomeScreen() {
                   style={styles.featuredCard}
                   onPress={() => router.push(`/(user)/property/${property.id}`)}
                   activeOpacity={0.9}>
-                  <Image source={{ uri: property.image }} style={styles.featuredImage} />
+                  <Image source={{ uri: property.images[0] }} style={styles.featuredImage} />
                   <TouchableOpacity
                     style={styles.favoriteButton}
                     onPress={() => toggleFavorite(property.id)}
@@ -204,10 +206,12 @@ export default function UserHomeScreen() {
                       <Text style={styles.featuredLocationText}>{property.city}, {property.state}</Text>
                     </View>
                     <View style={styles.featuredFooter}>
-                      <View style={styles.ratingBadge}>
-                        <Star color="#fbbf24" size={12} fill="#fbbf24" />
-                        <Text style={styles.ratingText}>{property.rating}</Text>
-                      </View>
+                      {property.rating > 0 && (
+                        <View style={styles.ratingBadge}>
+                          <Star color="#fbbf24" size={12} fill="#fbbf24" />
+                          <Text style={styles.ratingText}>{property.rating}</Text>
+                        </View>
+                      )}
                       <Text style={styles.featuredPrice}>${property.price}/night</Text>
                     </View>
                   </View>
@@ -229,7 +233,7 @@ export default function UserHomeScreen() {
               style={styles.propertyCard}
               onPress={() => router.push(`/(user)/property/${property.id}`)}
               activeOpacity={0.9}>
-              <Image source={{ uri: property.image }} style={styles.propertyImage} />
+              <Image source={{ uri: property.images[0] }} style={styles.propertyImage} />
               <View style={styles.propertyContent}>
                 <View style={styles.propertyHeader}>
                   <View style={styles.propertyInfo}>
@@ -252,7 +256,7 @@ export default function UserHomeScreen() {
 
                 <View style={styles.propertyDetails}>
                   <View style={styles.propertyTag}>
-                    <Text style={styles.propertyTagText}>{property.type}</Text>
+                    <Text style={styles.propertyTagText}>{property.type === 'hotel' ? 'Hotel' : 'House'}</Text>
                   </View>
                   <Text style={styles.propertyDetailText}>
                     {property.bedrooms} bed • {property.bathrooms} bath
@@ -260,11 +264,15 @@ export default function UserHomeScreen() {
                 </View>
 
                 <View style={styles.propertyFooter}>
-                  <View style={styles.ratingContainer}>
-                    <Star color="#fbbf24" size={16} fill="#fbbf24" />
-                    <Text style={styles.propertyRating}>{property.rating}</Text>
-                    <Text style={styles.propertyReviews}>({property.reviews})</Text>
-                  </View>
+                  {property.rating > 0 ? (
+                    <View style={styles.ratingContainer}>
+                      <Star color="#fbbf24" size={16} fill="#fbbf24" />
+                      <Text style={styles.propertyRating}>{property.rating}</Text>
+                      <Text style={styles.propertyReviews}>({property.reviews})</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.newPropertyBadge}>New</Text>
+                  )}
                   <Text style={styles.propertyPrice}>${property.price}<Text style={styles.priceUnit}>/night</Text></Text>
                 </View>
               </View>
@@ -531,6 +539,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'normal',
     color: '#64748b',
+  },
+  newPropertyBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#16a34a',
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   bottomPadding: {
     height: 40,

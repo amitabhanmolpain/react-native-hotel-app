@@ -1,30 +1,11 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Building2, MapPin, DollarSign, Plus, Edit, ArrowLeft } from 'lucide-react-native';
-
-const sampleProperties = [
-  {
-    id: '1',
-    name: 'Sunset Beach Hotel',
-    type: 'Hotel',
-    city: 'Miami',
-    price: 150,
-    bedrooms: 25,
-    image: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-  {
-    id: '2',
-    name: 'Mountain View Villa',
-    type: 'House',
-    city: 'Aspen',
-    price: 320,
-    bedrooms: 4,
-    image: 'https://images.pexels.com/photos/1732414/pexels-photo-1732414.jpeg?auto=compress&cs=tinysrgb&w=800',
-  },
-];
+import { useProperty } from '@/contexts/PropertyContext';
 
 export default function BusinessDashboardScreen() {
   const router = useRouter();
+  const { properties } = useProperty();
 
   return (
     <View style={styles.container}>
@@ -51,7 +32,7 @@ export default function BusinessDashboardScreen() {
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{sampleProperties.length}</Text>
+            <Text style={styles.statValue}>{properties.length}</Text>
             <Text style={styles.statLabel}>Active Listings</Text>
           </View>
           <View style={styles.statCard}>
@@ -67,19 +48,19 @@ export default function BusinessDashboardScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Properties</Text>
 
-          {sampleProperties.map((property) => (
+          {properties.map((property) => (
             <View key={property.id} style={styles.propertyCard}>
-              <Image source={{ uri: property.image }} style={styles.propertyImage} />
+              <Image source={{ uri: property.images[0] }} style={styles.propertyImage} />
               <View style={styles.propertyContent}>
                 <View style={styles.propertyHeader}>
                   <View style={styles.propertyInfo}>
                     <Text style={styles.propertyName}>{property.name}</Text>
                     <View style={styles.propertyMeta}>
                       <MapPin color="#64748b" size={14} />
-                      <Text style={styles.propertyMetaText}>{property.city}</Text>
+                      <Text style={styles.propertyMetaText}>{property.city}, {property.state}</Text>
                       <Text style={styles.propertyMetaDivider}>•</Text>
                       <Building2 color="#64748b" size={14} />
-                      <Text style={styles.propertyMetaText}>{property.type}</Text>
+                      <Text style={styles.propertyMetaText}>{property.type === 'hotel' ? 'Hotel' : 'House'}</Text>
                     </View>
                   </View>
                   <TouchableOpacity style={styles.editButton} activeOpacity={0.7}>

@@ -1,68 +1,62 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Dimensions, Modal, TextInput, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, MapPin, Star, Bed, Bath, Wifi, Coffee, Tv, Wind, Heart, Share2 } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Star, Bed, Bath, Wifi, Coffee, Tv, Wind, Heart, Share2, Calendar, Users, X } from 'lucide-react-native';
 import { useState } from 'react';
+import { useProperty } from '@/contexts/PropertyContext';
 
 const { width } = Dimensions.get('window');
-
-const propertyDetails = {
-  '1': {
-    name: 'Luxury Beach Resort',
-    type: 'Hotel',
-    city: 'Miami Beach',
-    state: 'FL',
-    address: '123 Ocean Drive, Miami Beach, FL 33139',
-    price: 280,
-    rating: 4.8,
-    reviews: 342,
-    bedrooms: 1,
-    bathrooms: 1,
-    description: 'Experience luxury beachfront living at its finest. Our resort offers stunning ocean views, world-class amenities, and unparalleled service. Wake up to the sound of waves and enjoy pristine sandy beaches just steps from your room.',
-    images: [
-      'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800',
-      'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?auto=compress&cs=tinysrgb&w=800',
-      'https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
-    amenities: ['WiFi', 'Air Conditioning', 'Room Service', 'TV', 'Coffee Maker', 'Pool'],
-    host: 'Luxury Resorts Inc.',
-    hostImage: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200',
-  },
-  '2': {
-    name: 'Mountain View Villa',
-    type: 'House',
-    city: 'Aspen',
-    state: 'CO',
-    address: '456 Mountain Road, Aspen, CO 81611',
-    price: 450,
-    rating: 4.9,
-    reviews: 128,
-    bedrooms: 4,
-    bathrooms: 3,
-    description: 'A stunning villa nestled in the mountains with breathtaking panoramic views. Perfect for families or groups seeking a luxurious mountain getaway. Features include a gourmet kitchen, spacious living areas, and a private hot tub.',
-    images: [
-      'https://images.pexels.com/photos/1732414/pexels-photo-1732414.jpeg?auto=compress&cs=tinysrgb&w=800',
-      'https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=800',
-      'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=800',
-    ],
-    amenities: ['WiFi', 'Air Conditioning', 'Kitchen', 'TV', 'Coffee Maker', 'Hot Tub'],
-    host: 'Sarah Mountain Homes',
-    hostImage: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200',
-  },
-};
 
 export default function PropertyDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+  const { properties, addBooking } = useProperty();
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [guests, setGuests] = useState('1');
 
-  const property = propertyDetails[id as keyof typeof propertyDetails] || propertyDetails['1'];
+  const property = properties.find(p => p.id === id) || properties[0];
+
+  if (!property) {
+    return (
+      <View style={styles.container}>
+        <Text>Property not found</Text>
+      </View>
+    );
+  }
 
   const amenityIcons: { [key: string]: any } = {
     'WiFi': Wifi,
     'Air Conditioning': Wind,
     'TV': Tv,
     'Coffee Maker': Coffee,
+  };
+
+  const handleBooking = () => {
+    if (!checkIn || !checkOut || !guests) {
+      Alert.alert('Missing Information', 'Please fill in all booking details.');
+      return;
+    }
+
+    const guestsNum = parseInt(guests);
+    const totalPrice = property.price * 3;
+
+    addBooking({
+      propertyId: property.id,
+      propertyName: property.name,
+      checkIn,
+      checkOut,
+      guests: guestsNum,
+      totalPrice,
+    });
+
+    Alert.alert(
+      'Booking Confirmed!',
+      `Your booking at ${property.name} has been confirmed.\n\nCheck-in: ${checkIn}\nCheck-out: ${checkOut}\nGuests: ${guestsNum}\nTotal: $${totalPrice}`,
+      [{ text: 'OK', onPress: () => setShowBookingModal(false) }]
+    );
   };
 
   return (
@@ -132,15 +126,17 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.locationText}>{property.city}, {property.state}</Text>
               </View>
             </View>
-            <View style={styles.ratingContainer}>
-              <Star color="#fbbf24" size={20} fill="#fbbf24" />
-              <Text style={styles.ratingText}>{property.rating}</Text>
-              <Text style={styles.reviewsText}>({property.reviews})</Text>
-            </View>
+            {property.rating > 0 && (
+              <View style={styles.ratingContainer}>
+                <Star color="#fbbf24" size={20} fill="#fbbf24" />
+                <Text style={styles.ratingText}>{property.rating}</Text>
+                <Text style={styles.reviewsText}>({property.reviews})</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.typeTag}>
-            <Text style={styles.typeTagText}>{property.type}</Text>
+            <Text style={styles.typeTagText}>{property.type === 'hotel' ? 'Hotel' : 'House'}</Text>
           </View>
 
           <View style={styles.section}>
@@ -163,11 +159,13 @@ export default function PropertyDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.description}>{property.description}</Text>
-            <Text style={styles.address}>{property.address}</Text>
-          </View>
+          {property.description && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.description}>{property.description}</Text>
+              <Text style={styles.address}>{property.address}</Text>
+            </View>
+          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Amenities</Text>
@@ -206,10 +204,87 @@ export default function PropertyDetailScreen() {
           <Text style={styles.priceLabel}>Price per night</Text>
           <Text style={styles.price}>${property.price}</Text>
         </View>
-        <TouchableOpacity style={styles.bookButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.bookButton}
+          onPress={() => setShowBookingModal(true)}
+          activeOpacity={0.8}>
           <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showBookingModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBookingModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Book {property.name}</Text>
+              <TouchableOpacity
+                onPress={() => setShowBookingModal(false)}
+                activeOpacity={0.7}>
+                <X color="#1e293b" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.modalInputContainer}>
+                <Calendar color="#475569" size={20} style={styles.modalInputIcon} />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Check-in (MM/DD/YYYY)"
+                  placeholderTextColor="#999"
+                  value={checkIn}
+                  onChangeText={setCheckIn}
+                />
+              </View>
+
+              <View style={styles.modalInputContainer}>
+                <Calendar color="#475569" size={20} style={styles.modalInputIcon} />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Check-out (MM/DD/YYYY)"
+                  placeholderTextColor="#999"
+                  value={checkOut}
+                  onChangeText={setCheckOut}
+                />
+              </View>
+
+              <View style={styles.modalInputContainer}>
+                <Users color="#475569" size={20} style={styles.modalInputIcon} />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Number of guests"
+                  placeholderTextColor="#999"
+                  value={guests}
+                  onChangeText={setGuests}
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              <View style={styles.priceBreakdown}>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceRowLabel}>${property.price} x 3 nights</Text>
+                  <Text style={styles.priceRowValue}>${property.price * 3}</Text>
+                </View>
+                <View style={styles.priceDivider} />
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceTotalLabel}>Total</Text>
+                  <Text style={styles.priceTotalValue}>${property.price * 3}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalBookButton}
+                onPress={handleBooking}
+                activeOpacity={0.8}>
+                <Text style={styles.modalBookButtonText}>Confirm Booking</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -496,6 +571,106 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   bookButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  modalInputIcon: {
+    marginRight: 12,
+  },
+  modalInput: {
+    flex: 1,
+    height: 52,
+    fontSize: 16,
+    color: '#333',
+  },
+  priceBreakdown: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  priceRowLabel: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  priceRowValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
+  },
+  priceTotalLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  priceTotalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#16a34a',
+  },
+  modalBookButton: {
+    backgroundColor: '#4a7ba7',
+    borderRadius: 12,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4a7ba7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalBookButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
