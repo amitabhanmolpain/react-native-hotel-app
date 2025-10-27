@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Building2, MapPin, DollarSign, Plus, Edit, ArrowLeft } from 'lucide-react-native';
+import { Building2, MapPin, DollarSign, Plus, Edit, ArrowLeft, Calendar, Eye } from 'lucide-react-native';
 import { useProperty } from '@/contexts/PropertyContext';
 
 export default function BusinessDashboardScreen() {
@@ -30,23 +30,60 @@ export default function BusinessDashboardScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
 
+        {/* Quick Action Buttons */}
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity
+            style={styles.primaryActionButton}
+            onPress={() => router.push("/business/view-bookings")}
+            activeOpacity={0.8}>
+            <View style={styles.actionButtonIcon}>
+              <Eye color="#fff" size={20} />
+            </View>
+            <Text style={styles.primaryActionButtonText}>View Bookings</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryActionButton}
+            onPress={() => router.push('/business/UpcomingEventsScreen')}
+            activeOpacity={0.8}>
+            <View style={styles.actionButtonIconSecondary}>
+              <Calendar color="#2563eb" size={20} />
+            </View>
+            <Text style={styles.secondaryActionButtonText}>Upcoming Events</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Building2 color="#2563eb" size={20} />
+            </View>
             <Text style={styles.statValue}>{properties.length}</Text>
             <Text style={styles.statLabel}>Active Listings</Text>
           </View>
           <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Calendar color="#10b981" size={20} />
+            </View>
             <Text style={styles.statValue}>24</Text>
             <Text style={styles.statLabel}>Bookings</Text>
           </View>
           <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <DollarSign color="#f59e0b" size={20} />
+            </View>
             <Text style={styles.statValue}>$8.5K</Text>
             <Text style={styles.statLabel}>Revenue</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Properties</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Properties</Text>
+            <View style={styles.propertyCount}>
+              <Text style={styles.propertyCountText}>{properties.length}</Text>
+            </View>
+          </View>
 
           {properties.map((property) => (
             <View key={property.id} style={styles.propertyCard}>
@@ -136,6 +173,71 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
   },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  primaryActionButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionButtonIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryActionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  secondaryActionButton: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 2,
+    borderColor: '#2563eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionButtonIconSecondary: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryActionButtonText: {
+    color: '#2563eb',
+    fontWeight: '600',
+    fontSize: 15,
+  },
   statsContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -150,6 +252,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -163,11 +274,27 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 16,
+  },
+  propertyCount: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  propertyCountText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   propertyCard: {
     backgroundColor: '#fff',
@@ -176,6 +303,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   propertyImage: {
     width: '100%',
