@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, Mail, Lock, ArrowLeft } from 'lucide-react-native';
+import { auth } from '../firebaseConfig'; // adjust path if needed
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function BusinessAuthScreen() {
   const router = useRouter();
@@ -10,9 +12,24 @@ export default function BusinessAuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [businessName, setBusinessName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleAuth = () => {
-    router.push('/business/register');
+  const handleAuth = async () => {
+    setLoading(true);
+    try {
+      if (isSignUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        Alert.alert('Success', 'Business registered successfully!');
+        setIsSignUp(false); // redirect to login view
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        router.push('/business/(tabs)/dashboard');
+      }
+    } catch (error: any) {
+      Alert.alert('Authentication Error', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,7 +46,7 @@ export default function BusinessAuthScreen() {
 
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() => router.push('/')}
               activeOpacity={0.7}>
               <ArrowLeft color="#fff" size={24} />
             </TouchableOpacity>
@@ -88,7 +105,7 @@ export default function BusinessAuthScreen() {
                 onPress={handleAuth}
                 activeOpacity={0.8}>
                 <Text style={styles.primaryButtonText}>
-                  {isSignUp ? 'Register & Add Property' : 'Sign In'}
+                  {isSignUp ? 'Register' : 'Sign In'}
                 </Text>
               </TouchableOpacity>
 
