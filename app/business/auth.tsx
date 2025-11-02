@@ -3,8 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Keyboa
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, Mail, Lock, ArrowLeft } from 'lucide-react-native';
-import { auth } from '../firebaseConfig'; // adjust path if needed
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { supabase } from '../supabaseClient'
+//import { auth } from '../firebaseConfig'; // adjust path if needed
+//import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function BusinessAuthScreen() {
   const router = useRouter();
@@ -17,14 +18,37 @@ export default function BusinessAuthScreen() {
   const handleAuth = async () => {
     setLoading(true);
     try {
-      if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+      /*if (isSignUp) {
+        const { user, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
         Alert.alert('Success', 'Business registered successfully!');
         setIsSignUp(false); // redirect to login view
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         router.push('/business/(tabs)/dashboard');
-      }
+      } */
+     if (isSignUp) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { businessName },
+    },
+  });
+  if (error) throw error;
+  Alert.alert('Success', 'Business registered successfully! Check your email for verification.');
+  setIsSignUp(false);
+} else {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  router.push('/business/(tabs)/dashboard');
+}
     } catch (error: any) {
       Alert.alert('Authentication Error', error.message);
     } finally {
