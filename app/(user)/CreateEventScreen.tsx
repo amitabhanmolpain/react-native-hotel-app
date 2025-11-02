@@ -350,7 +350,7 @@ export default function CreateEventScreen() {
                 </View>
                 <View style={styles.venueDetailItem}>
                   <DollarSign size={16} color="#16a34a" />
-                  <Text style={styles.venuePriceText}>${venue.pricePerHour}/hour</Text>
+                  <Text style={styles.venuePriceText}>₹{venue.pricePerHour}/hour</Text>
                 </View>
               </View>
 
@@ -454,7 +454,7 @@ export default function CreateEventScreen() {
           <Text style={styles.reviewSectionTitle}>Cost Breakdown</Text>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Venue Rate:</Text>
-            <Text style={styles.reviewValue}>${selectedVenue?.pricePerHour}/hour</Text>
+            <Text style={styles.reviewValue}>₹{selectedVenue?.pricePerHour}/hour</Text>
           </View>
           <View style={styles.reviewRow}>
             <Text style={styles.reviewLabel}>Duration:</Text>
@@ -463,7 +463,7 @@ export default function CreateEventScreen() {
           <View style={styles.reviewDivider} />
           <View style={styles.reviewRow}>
             <Text style={styles.reviewTotalLabel}>Total Cost:</Text>
-            <Text style={styles.reviewTotalValue}>${totalCost.toFixed(2)}</Text>
+            <Text style={styles.reviewTotalValue}>₹{totalCost.toFixed(2)}</Text>
           </View>
         </View>
       </View>

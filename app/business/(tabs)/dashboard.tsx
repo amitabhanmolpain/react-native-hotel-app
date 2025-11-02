@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import {
   Home,
   Bed,
@@ -257,7 +258,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           </View>
           <View style={styles.propertyFooter}>
             <View style={styles.priceContainer}>
-              <Text style={styles.priceAmount}>${price}</Text>
+              <Text style={styles.priceAmount}>₹{price}</Text>
               <Text style={styles.priceLabel}>/night</Text>
             </View>
             <TouchableOpacity style={styles.viewButton}>
@@ -273,6 +274,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 
 // Main Dashboard Component
 const Dashboard: React.FC = () => {
+  const router = useRouter();
   const headerFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -308,7 +310,7 @@ const Dashboard: React.FC = () => {
     },
     {
       title: 'Revenue',
-      value: '$52.4K',
+      value: '₹52.4K',
       icon: DollarSign,
       gradient: ['#f59e0b', '#eab308'],
       subtitle: '+18% this week',
@@ -320,19 +322,19 @@ const Dashboard: React.FC = () => {
       title: 'Add Room',
       icon: Plus,
       color: '#6366f1',
-      onPress: () => console.log('Add Room'),
+      onPress: () => router.push('/business/add-room'),
     },
     {
       title: 'View Bookings',
       icon: Calendar,
       color: '#06b6d4',
-      onPress: () => console.log('View Bookings'),
+      onPress: () => router.push('/business/(tabs)/bookings'),
     },
     {
       title: 'Manage Staff',
       icon: Users,
       color: '#10b981',
-      onPress: () => console.log('Manage Staff'),
+      onPress: () => router.push('/business/manage-staff'),
     },
   ];
 

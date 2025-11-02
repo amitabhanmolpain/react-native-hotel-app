@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, XCircle, Zap, ArrowUpRight } from 'lucide-react';
-import { LineChart, Line, PieChart, Pie, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, ResponsiveContainer } from 'recharts';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  SafeAreaView,
+  Animated,
+  Dimensions,
+} from 'react-native';
+import { TrendingUp, TrendingDown, DollarSign, Users, Calendar, XCircle, Zap, ArrowUpRight } from 'lucide-react-native';
+import { LineChart } from 'react-native-chart-kit';
+import { LinearGradient } from 'expo-linear-gradient';
+import { supabase } from '../../supabaseClient';
+
+const { width } = Dimensions.get('window');
 
 // Types
 interface KPI {
@@ -10,7 +23,7 @@ interface KPI {
   change: number;
   trend: 'up' | 'down';
   icon: React.ReactNode;
-  gradient: string;
+  gradient: [string, string];
 }
 
 interface Insight {
@@ -20,54 +33,112 @@ interface Insight {
   icon: React.ReactNode;
 }
 
-// Dummy Data
-const weeklyRevenueData = [
-  { day: 'Mon', revenue: 12500, bookings: 15 },
-  { day: 'Tue', revenue: 15200, bookings: 18 },
-  { day: 'Wed', revenue: 18900, bookings: 22 },
-  { day: 'Thu', revenue: 16400, bookings: 19 },
-  { day: 'Fri', revenue: 22100, bookings: 28 },
-  { day: 'Sat', revenue: 28500, bookings: 35 },
-  { day: 'Sun', revenue: 25300, bookings: 31 },
-];
-
-const monthlyBookingsData = [
-  { month: 'Jan', bookings: 145, revenue: 87000 },
-  { month: 'Feb', bookings: 168, revenue: 95400 },
-  { month: 'Mar', bookings: 192, revenue: 112300 },
-  { month: 'Apr', bookings: 178, revenue: 98700 },
-  { month: 'May', bookings: 205, revenue: 125600 },
-  { month: 'Jun', bookings: 234, revenue: 145800 },
-];
-
-const occupancyData = [
-  { name: 'Occupied', value: 68, color: '#3b82f6' },
-  { name: 'Available', value: 32, color: '#e5e7eb' },
-];
-
-const roomTypeData = [
-  { type: 'Deluxe', occupied: 45, total: 60 },
-  { type: 'Standard', occupied: 38, total: 50 },
-  { type: 'Suite', occupied: 12, total: 20 },
-  { type: 'Family', occupied: 28, total: 35 },
-];
-
 const AnalyticsScreen: React.FC = () => {
   const [mounted, setMounted] = useState(false);
+  const [totalProfit, setTotalProfit] = useState<number>(0);
+  const [profitChange, setProfitChange] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+    fetchProfitData();
+    // Refresh profit data every 30 seconds
+    const interval = setInterval(fetchProfitData, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchProfitData = async () => {
+    try {
+      // Fetch bookings from Supabase
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select('total_cost, status, created_at');
+
+      if (error) {
+        console.error('Error fetching bookings:', error);
+        // Use dummy data if error
+        calculateDummyProfit();
+        return;
+      }
+
+      if (bookings) {
+        // Calculate total profit from confirmed/completed bookings
+        const confirmedBookings = bookings.filter(
+          (b) => b.status === 'confirmed' || b.status === 'checked-out' || b.status === 'checked-in'
+        );
+        const profit = confirmedBookings.reduce((sum, booking) => sum + (booking.total_cost || 0), 0);
+        
+        // Calculate profit change (compare with previous period - simplified)
+        const lastWeekProfit = profit * 0.85; // Simulated previous week data
+        const change = ((profit - lastWeekProfit) / lastWeekProfit) * 100;
+        
+        setTotalProfit(profit);
+        setProfitChange(change);
+      } else {
+        calculateDummyProfit();
+      }
+    } catch (error) {
+      console.error('Error calculating profit:', error);
+      calculateDummyProfit();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateDummyProfit = () => {
+    // Dummy profit calculation based on recent bookings
+    const dummyProfit = 187500;
+    const dummyChange = 12.5;
+    setTotalProfit(dummyProfit);
+    setProfitChange(dummyChange);
+  };
+
+  const weeklyRevenueData = [
+    { day: 'Mon', revenue: 12500, bookings: 15 },
+    { day: 'Tue', revenue: 15200, bookings: 18 },
+    { day: 'Wed', revenue: 18900, bookings: 22 },
+    { day: 'Thu', revenue: 16400, bookings: 19 },
+    { day: 'Fri', revenue: 22100, bookings: 28 },
+    { day: 'Sat', revenue: 28500, bookings: 35 },
+    { day: 'Sun', revenue: 25300, bookings: 31 },
+  ];
+
+  const monthlyBookingsData = [
+    { month: 'Jan', bookings: 145, revenue: 87000 },
+    { month: 'Feb', bookings: 168, revenue: 95400 },
+    { month: 'Mar', bookings: 192, revenue: 112300 },
+    { month: 'Apr', bookings: 178, revenue: 98700 },
+    { month: 'May', bookings: 205, revenue: 125600 },
+    { month: 'Jun', bookings: 234, revenue: 145800 },
+  ];
+
+  const roomTypeData = [
+    { type: 'Deluxe', occupied: 45, total: 60 },
+    { type: 'Standard', occupied: 38, total: 50 },
+    { type: 'Suite', occupied: 12, total: 20 },
+    { type: 'Family', occupied: 28, total: 35 },
+  ];
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 10000000) {
+      return `₹${(amount / 10000000).toFixed(2)}Cr`;
+    } else if (amount >= 100000) {
+      return `₹${(amount / 100000).toFixed(1)}L`;
+    } else if (amount >= 1000) {
+      return `₹${(amount / 1000).toFixed(1)}K`;
+    }
+    return `₹${amount.toFixed(0)}`;
+  };
 
   const kpiData: KPI[] = [
     {
       id: '1',
-      title: 'Total Revenue',
-      value: '$138.7K',
-      change: 12.5,
-      trend: 'up',
+      title: 'Live Profit',
+      value: loading ? '...' : formatCurrency(totalProfit),
+      change: profitChange,
+      trend: profitChange >= 0 ? 'up' : 'down',
       icon: <DollarSign size={24} color="#ffffff" />,
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      gradient: ['#667eea', '#764ba2'],
     },
     {
       id: '2',
@@ -76,7 +147,7 @@ const AnalyticsScreen: React.FC = () => {
       change: 8.3,
       trend: 'up',
       icon: <Users size={24} color="#ffffff" />,
-      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      gradient: ['#f093fb', '#f5576c'],
     },
     {
       id: '3',
@@ -85,7 +156,7 @@ const AnalyticsScreen: React.FC = () => {
       change: 15.2,
       trend: 'up',
       icon: <Calendar size={24} color="#ffffff" />,
-      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      gradient: ['#4facfe', '#00f2fe'],
     },
     {
       id: '4',
@@ -94,16 +165,16 @@ const AnalyticsScreen: React.FC = () => {
       change: -3.4,
       trend: 'down',
       icon: <XCircle size={24} color="#ffffff" />,
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      gradient: ['#43e97b', '#38f9d7'],
     },
   ];
 
   const insights: Insight[] = [
     {
       id: '1',
-      text: 'Occupancy up 12% this week! Weekend bookings are driving growth.',
-      type: 'positive',
-      icon: <TrendingUp size={18} color="#10b981" />,
+      text: `Total profit: ${formatCurrency(totalProfit)}. ${profitChange >= 0 ? 'Increasing' : 'Decreasing'} by ${Math.abs(profitChange).toFixed(1)}% this period.`,
+      type: profitChange >= 0 ? 'positive' : 'warning',
+      icon: profitChange >= 0 ? <TrendingUp size={18} color="#10b981" /> : <TrendingDown size={18} color="#f59e0b" />,
     },
     {
       id: '2',
@@ -113,7 +184,7 @@ const AnalyticsScreen: React.FC = () => {
     },
     {
       id: '3',
-      text: 'Revenue increased by $18.2K compared to last week.',
+      text: 'Revenue increased significantly. Weekend bookings are driving growth.',
       type: 'positive',
       icon: <ArrowUpRight size={18} color="#10b981" />,
     },
@@ -125,336 +196,299 @@ const AnalyticsScreen: React.FC = () => {
     },
   ];
 
+  const chartConfig = {
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+    strokeWidth: 3,
+    barPercentage: 0.7,
+    useShadowColorFromDataset: false,
+    decimalPlaces: 0,
+    propsForLabels: {
+      fontSize: 11,
+      fontWeight: '600' as const,
+      fill: '#64748b',
+    },
+  };
+
+  const revenueChartData = {
+    labels: weeklyRevenueData.map((d) => d.day),
+    datasets: [
+      {
+        data: weeklyRevenueData.map((d) => d.revenue),
+        color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+        strokeWidth: 3,
+      },
+    ],
+  };
+
+  const bookingsChartData = {
+    labels: monthlyBookingsData.map((d) => d.month),
+    datasets: [
+      {
+        data: monthlyBookingsData.map((d) => d.bookings),
+        color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
+        strokeWidth: 3,
+      },
+    ],
+  };
+
   return (
-    <div style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.headerTitle}>Analytics</h1>
-        <p style={styles.headerSubtitle}>Real-time insights and performance metrics</p>
-      </div>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Analytics</Text>
+        <Text style={styles.headerSubtitle}>Real-time insights and performance metrics</Text>
+      </View>
 
       {/* Scrollable Content */}
-      <div style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* KPI Cards */}
-        <div style={styles.kpiContainer}>
+        <View style={styles.kpiContainer}>
           {kpiData.map((kpi, index) => (
-            <div
+            <Animated.View
               key={kpi.id}
               style={{
-                ...styles.kpiCard,
-                background: kpi.gradient,
                 opacity: mounted ? 1 : 0,
-                transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-                transition: `all 0.5s ease ${index * 0.1}s`,
+                transform: [{ translateY: mounted ? 0 : 20 }],
               }}
             >
-              <div style={styles.kpiIconContainer}>{kpi.icon}</div>
-              <div style={styles.kpiContent}>
-                <p style={styles.kpiTitle}>{kpi.title}</p>
-                <h2 style={styles.kpiValue}>{kpi.value}</h2>
-                <div style={styles.kpiChangeContainer}>
-                  {kpi.trend === 'up' ? (
-                    <TrendingUp size={16} color="#ffffff" />
-                  ) : (
-                    <TrendingDown size={16} color="#ffffff" />
-                  )}
-                  <span style={styles.kpiChange}>
-                    {kpi.change > 0 ? '+' : ''}{kpi.change}% vs last week
-                  </span>
-                </div>
-              </div>
-            </div>
+              <LinearGradient
+                colors={kpi.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.kpiCard}
+              >
+                <View style={styles.kpiIconContainer}>{kpi.icon}</View>
+                <View style={styles.kpiContent}>
+                  <Text style={styles.kpiTitle}>{kpi.title}</Text>
+                  <Text style={styles.kpiValue}>{kpi.value}</Text>
+                  <View style={styles.kpiChangeContainer}>
+                    {kpi.trend === 'up' ? (
+                      <TrendingUp size={16} color="#ffffff" />
+                    ) : (
+                      <TrendingDown size={16} color="#ffffff" />
+                    )}
+                    <Text style={styles.kpiChange}>
+                      {kpi.change > 0 ? '+' : ''}{kpi.change.toFixed(1)}% vs last week
+                    </Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </Animated.View>
           ))}
-        </div>
+        </View>
 
         {/* Insights Section */}
-        <div
-          style={{
-            ...styles.section,
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'all 0.6s ease 0.4s',
-          }}
-        >
-          <h3 style={styles.sectionTitle}>Smart Insights</h3>
-          <div style={styles.insightsContainer}>
-            {insights.map((insight, index) => (
-              <div
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Smart Insights</Text>
+          <View style={styles.insightsContainer}>
+            {insights.map((insight) => (
+              <View
                 key={insight.id}
-                style={{
-                  ...styles.insightCard,
-                  ...(insight.type === 'positive'
+                style={[
+                  styles.insightCard,
+                  insight.type === 'positive'
                     ? styles.insightPositive
                     : insight.type === 'warning'
                     ? styles.insightWarning
-                    : styles.insightInfo),
-                  opacity: mounted ? 1 : 0,
-                  transform: mounted ? 'translateX(0)' : 'translateX(-20px)',
-                  transition: `all 0.4s ease ${0.5 + index * 0.1}s`,
-                }}
+                    : styles.insightInfo,
+                ]}
               >
-                <div style={styles.insightIcon}>{insight.icon}</div>
-                <p style={styles.insightText}>{insight.text}</p>
-              </div>
+                <View style={styles.insightIcon}>{insight.icon}</View>
+                <Text style={styles.insightText}>{insight.text}</Text>
+              </View>
             ))}
-          </div>
-        </div>
+          </View>
+        </View>
 
         {/* Weekly Revenue Chart */}
-        <div
-          style={{
-            ...styles.section,
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'all 0.6s ease 0.6s',
-          }}
-        >
-          <h3 style={styles.sectionTitle}>Weekly Revenue Trend</h3>
-          <div style={styles.chartCard}>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={weeklyRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ fill: '#3b82f6', r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Weekly Revenue Trend</Text>
+          <View style={styles.chartCard}>
+            <LineChart
+              data={revenueChartData}
+              width={width - 60}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+              withDots={true}
+              withInnerLines={false}
+              withOuterLines={false}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              withVerticalLabels={true}
+              withHorizontalLabels={true}
+              fromZero
+            />
+          </View>
+        </View>
 
-        {/* Charts Row */}
-        <div style={styles.chartsRow}>
-          {/* Occupancy Pie Chart */}
-          <div
-            style={{
-              ...styles.chartSection,
-              opacity: mounted ? 1 : 0,
-              transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'all 0.6s ease 0.7s',
-            }}
-          >
-            <h3 style={styles.sectionTitle}>Room Occupancy</h3>
-            <div style={styles.chartCard}>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={occupancyData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(props) => `${props.name} ${(Number(props.percent) * 100).toFixed(0)}%`}
-                    outerRadius={90}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {occupancyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={styles.occupancyStats}>
-                <div style={styles.occupancyStat}>
-                  <div style={{ ...styles.occupancyDot, backgroundColor: '#3b82f6' }} />
-                  <span style={styles.occupancyLabel}>Occupied: 123 rooms</span>
-                </div>
-                <div style={styles.occupancyStat}>
-                  <div style={{ ...styles.occupancyDot, backgroundColor: '#e5e7eb' }} />
-                  <span style={styles.occupancyLabel}>Available: 57 rooms</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Monthly Bookings Bar Chart */}
-          <div
-            style={{
-              ...styles.chartSection,
-              opacity: mounted ? 1 : 0,
-              transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'all 0.6s ease 0.8s',
-            }}
-          >
-            <h3 style={styles.sectionTitle}>Monthly Bookings</h3>
-            <div style={styles.chartCard}>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={monthlyBookingsData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                    }}
-                  />
-                  <Bar dataKey="bookings" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
+        {/* Monthly Bookings Chart */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Monthly Bookings</Text>
+          <View style={styles.chartCard}>
+            <LineChart
+              data={bookingsChartData}
+              width={width - 60}
+              height={220}
+              chartConfig={{
+                ...chartConfig,
+                color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
+              }}
+              bezier
+              style={styles.chart}
+              withDots={true}
+              withInnerLines={false}
+              withOuterLines={false}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              withVerticalLabels={true}
+              withHorizontalLabels={true}
+              fromZero
+            />
+          </View>
+        </View>
 
         {/* Room Type Performance */}
-        <div
-          style={{
-            ...styles.section,
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'all 0.6s ease 0.9s',
-          }}
-        >
-          <h3 style={styles.sectionTitle}>Room Type Performance</h3>
-          <div style={styles.roomTypeContainer}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Room Type Performance</Text>
+          <View style={styles.roomTypeContainer}>
             {roomTypeData.map((room) => {
               const occupancyPercent = (room.occupied / room.total) * 100;
               return (
-                <div key={room.type} style={styles.roomTypeCard}>
-                  <div style={styles.roomTypeHeader}>
-                    <h4 style={styles.roomTypeName}>{room.type}</h4>
-                    <span style={styles.roomTypeStats}>
+                <View key={room.type} style={styles.roomTypeCard}>
+                  <View style={styles.roomTypeHeader}>
+                    <Text style={styles.roomTypeName}>{room.type}</Text>
+                    <Text style={styles.roomTypeStats}>
                       {room.occupied}/{room.total} rooms
-                    </span>
-                  </div>
-                  <div style={styles.progressBar}>
-                    <div
-                      style={{
-                        ...styles.progressFill,
-                        width: `${occupancyPercent}%`,
-                        backgroundColor:
-                          occupancyPercent > 75
-                            ? '#10b981'
-                            : occupancyPercent > 50
-                            ? '#3b82f6'
-                            : '#f59e0b',
-                      }}
+                    </Text>
+                  </View>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${occupancyPercent}%`,
+                          backgroundColor:
+                            occupancyPercent > 75
+                              ? '#10b981'
+                              : occupancyPercent > 50
+                              ? '#3b82f6'
+                              : '#f59e0b',
+                        },
+                      ]}
                     />
-                  </div>
-                  <span style={styles.roomTypePercent}>{occupancyPercent.toFixed(0)}% occupied</span>
-                </div>
+                  </View>
+                  <Text style={styles.roomTypePercent}>{occupancyPercent.toFixed(0)}% occupied</Text>
+                </View>
               );
             })}
-          </div>
-        </div>
-      </div>
-    </div>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const styles: { [key: string]: React.CSSProperties } = {
+const styles = StyleSheet.create({
   container: {
-    height: '100vh',
+    flex: 1,
     backgroundColor: '#f9fafb',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    display: 'flex',
-    flexDirection: 'column',
   },
   header: {
-    padding: '20px 20px 16px',
+    padding: 20,
+    paddingBottom: 16,
     backgroundColor: '#f9fafb',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
   headerTitle: {
-    fontSize: '36px',
+    fontSize: 36,
     fontWeight: '700',
     color: '#111827',
-    margin: '0 0 8px 0',
+    marginBottom: 8,
   },
   headerSubtitle: {
-    fontSize: '16px',
+    fontSize: 16,
     color: '#6b7280',
-    margin: 0,
   },
   scrollView: {
     flex: 1,
-    overflowY: 'auto',
-    padding: '20px',
-    maxWidth: '1400px',
-    width: '100%',
-    margin: '0 auto',
-    boxSizing: 'border-box',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
   kpiContainer: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '16px',
-    marginBottom: '32px',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 32,
   },
   kpiCard: {
-    borderRadius: '16px',
-    padding: '24px',
-    color: '#ffffff',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    position: 'relative',
-    overflow: 'hidden',
+    width: (width - 56) / 2,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   kpiIconContainer: {
-    marginBottom: '16px',
+    marginBottom: 16,
   },
   kpiContent: {
     position: 'relative',
     zIndex: 1,
   },
   kpiTitle: {
-    fontSize: '14px',
+    fontSize: 14,
     fontWeight: '500',
-    opacity: 0.9,
-    margin: '0 0 8px 0',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 8,
   },
   kpiValue: {
-    fontSize: '32px',
+    fontSize: 32,
     fontWeight: '700',
-    margin: '0 0 12px 0',
+    color: '#ffffff',
+    marginBottom: 12,
   },
   kpiChangeContainer: {
-    display: 'flex',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: '6px',
+    gap: 6,
   },
   kpiChange: {
-    fontSize: '13px',
+    fontSize: 13,
     fontWeight: '500',
-    opacity: 0.95,
+    color: 'rgba(255, 255, 255, 0.95)',
   },
   section: {
-    marginBottom: '32px',
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: '20px',
+    fontSize: 20,
     fontWeight: '600',
     color: '#111827',
-    margin: '0 0 16px 0',
+    marginBottom: 16,
   },
   insightsContainer: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '12px',
+    gap: 12,
   },
   insightCard: {
-    display: 'flex',
+    flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: '12px',
-    padding: '16px',
-    borderRadius: '12px',
-    border: '1px solid',
+    gap: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   insightPositive: {
     backgroundColor: '#f0fdf4',
@@ -469,95 +503,72 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderColor: '#93c5fd',
   },
   insightIcon: {
-    marginTop: '2px',
+    marginTop: 2,
   },
   insightText: {
-    fontSize: '14px',
-    lineHeight: '1.5',
-    color: '#374151',
-    margin: 0,
     flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#374151',
   },
   chartCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '16px',
-    padding: '24px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  chartsRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-    gap: '24px',
-    marginBottom: '32px',
-  },
-  chartSection: {
-    flex: 1,
-  },
-  occupancyStats: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '24px',
-    marginTop: '16px',
-  },
-  occupancyStat: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  occupancyDot: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-  },
-  occupancyLabel: {
-    fontSize: '14px',
-    color: '#6b7280',
+  chart: {
+    borderRadius: 16,
   },
   roomTypeContainer: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '16px',
+    gap: 16,
   },
   roomTypeCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   roomTypeHeader: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '12px',
+    marginBottom: 12,
   },
   roomTypeName: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    margin: 0,
   },
   roomTypeStats: {
-    fontSize: '13px',
+    fontSize: 13,
     color: '#6b7280',
   },
   progressBar: {
     width: '100%',
-    height: '8px',
+    height: 8,
     backgroundColor: '#e5e7eb',
-    borderRadius: '4px',
+    borderRadius: 4,
     overflow: 'hidden',
-    marginBottom: '8px',
+    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    borderRadius: '4px',
-    transition: 'width 1s ease',
+    borderRadius: 4,
   },
   roomTypePercent: {
-    fontSize: '13px',
+    fontSize: 13,
     fontWeight: '500',
     color: '#374151',
   },
-};
+});
 
 export default AnalyticsScreen;

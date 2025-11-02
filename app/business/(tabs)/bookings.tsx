@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { User, CalendarCheck, Clock, CreditCard, Search, ChevronRight, Filter } from 'lucide-react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  TextInput,
+  Animated,
+} from 'react-native';
+import { User, CalendarCheck, Clock, CreditCard, Search, ChevronRight, Filter } from 'lucide-react-native';
 
 // Types
 interface Booking {
@@ -223,270 +233,270 @@ const BookingsScreen: React.FC = () => {
   };
 
   return (
-    <div style={styles.container}>
-      {/* Fixed Header */}
-      <div style={styles.header}>
-        <div style={styles.headerTop}>
-          <div>
-            <h1 style={styles.headerTitle}>Bookings</h1>
-            <p style={styles.headerSubtitle}>Manage your hotel reservations</p>
-          </div>
-          <button style={styles.filterButton}>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTitle}>Bookings</Text>
+            <Text style={styles.headerSubtitle}>Manage your hotel reservations</Text>
+          </View>
+          <TouchableOpacity style={styles.filterButton}>
             <Filter size={20} color="#64748b" />
-          </button>
-        </div>
+          </TouchableOpacity>
+        </View>
 
         {/* Tabs */}
-        <div style={styles.tabContainer}>
-          <button
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'recent' ? styles.activeTab : {}),
-            }}
-            onClick={() => setActiveTab('recent')}>
-            <span style={{
-              ...styles.tabText,
-              ...(activeTab === 'recent' ? styles.activeTabText : {}),
-            }}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'recent' && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab('recent')}>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'recent' && styles.activeTabText,
+            ]}>
               Recent
-            </span>
-            <span style={{
-              ...styles.tabBadge,
-              ...(activeTab === 'recent' ? styles.tabBadgeActive : {}),
-            }}>
-              {getTabCount('recent')}
-            </span>
-          </button>
-          <button
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'checkins' ? styles.activeTab : {}),
-            }}
-            onClick={() => setActiveTab('checkins')}>
-            <span style={{
-              ...styles.tabText,
-              ...(activeTab === 'checkins' ? styles.activeTabText : {}),
-            }}>
+            </Text>
+            <View style={[
+              styles.tabBadge,
+              activeTab === 'recent' && styles.tabBadgeActive,
+            ]}>
+              <Text style={[
+                styles.tabBadgeText,
+                activeTab === 'recent' && styles.tabBadgeTextActive,
+              ]}>
+                {getTabCount('recent')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'checkins' && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab('checkins')}>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'checkins' && styles.activeTabText,
+            ]}>
               Check-ins
-            </span>
-            <span style={{
-              ...styles.tabBadge,
-              ...(activeTab === 'checkins' ? styles.tabBadgeActive : {}),
-            }}>
-              {getTabCount('checkins')}
-            </span>
-          </button>
-          <button
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'checkouts' ? styles.activeTab : {}),
-            }}
-            onClick={() => setActiveTab('checkouts')}>
-            <span style={{
-              ...styles.tabText,
-              ...(activeTab === 'checkouts' ? styles.activeTabText : {}),
-            }}>
+            </Text>
+            <View style={[
+              styles.tabBadge,
+              activeTab === 'checkins' && styles.tabBadgeActive,
+            ]}>
+              <Text style={[
+                styles.tabBadgeText,
+                activeTab === 'checkins' && styles.tabBadgeTextActive,
+              ]}>
+                {getTabCount('checkins')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === 'checkouts' && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab('checkouts')}>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'checkouts' && styles.activeTabText,
+            ]}>
               Check-outs
-            </span>
-            <span style={{
-              ...styles.tabBadge,
-              ...(activeTab === 'checkouts' ? styles.tabBadgeActive : {}),
-            }}>
-              {getTabCount('checkouts')}
-            </span>
-          </button>
-        </div>
+            </Text>
+            <View style={[
+              styles.tabBadge,
+              activeTab === 'checkouts' && styles.tabBadgeActive,
+            ]}>
+              <Text style={[
+                styles.tabBadgeText,
+                activeTab === 'checkouts' && styles.tabBadgeTextActive,
+              ]}>
+                {getTabCount('checkouts')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* Search Bar */}
-        <div style={styles.searchContainer}>
+        <View style={styles.searchContainer}>
           <Search size={20} color="#9ca3af" />
-          <input
+          <TextInput
             style={styles.searchInput}
             placeholder="Search by guest name, date, or ID..."
+            placeholderTextColor="#9ca3af"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChangeText={setSearchQuery}
           />
-        </div>
-      </div>
+        </View>
+      </View>
 
       {/* Scrollable Content */}
-      <div style={styles.scrollView}>
-        <div style={styles.scrollContent}>
-          {filteredBookings.length === 0 ? (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}>🔍</div>
-              <p style={styles.emptyStateText}>No bookings found</p>
-              <p style={styles.emptyStateSubtext}>
-                Try adjusting your search criteria
-              </p>
-            </div>
-          ) : (
-            filteredBookings.map((booking, index) => (
-              <div 
-                key={booking.id} 
-                style={{
-                  ...styles.bookingCard,
-                  animation: `slideIn 0.3s ease ${index * 0.05}s both`,
-                }}>
-                {/* Header Row */}
-                <div style={styles.cardHeader}>
-                  <div style={styles.guestInfo}>
-                    <div style={styles.iconCircle}>
-                      <User size={18} color="#3b82f6" />
-                    </div>
-                    <div>
-                      <div style={styles.guestName}>{booking.guestName}</div>
-                      <div style={styles.bookingId}>ID: {booking.id}</div>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      ...styles.statusBadge,
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {filteredBookings.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🔍</Text>
+            <Text style={styles.emptyStateText}>No bookings found</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Try adjusting your search criteria
+            </Text>
+          </View>
+        ) : (
+          filteredBookings.map((booking, index) => (
+            <View key={booking.id} style={styles.bookingCard}>
+              {/* Header Row */}
+              <View style={styles.cardHeader}>
+                <View style={styles.guestInfo}>
+                  <View style={styles.iconCircle}>
+                    <User size={18} color="#3b82f6" />
+                  </View>
+                  <View>
+                    <Text style={styles.guestName}>{booking.guestName}</Text>
+                    <Text style={styles.bookingId}>ID: {booking.id}</Text>
+                  </View>
+                </View>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
                       backgroundColor: getStatusColor(booking.status) + '15',
-                      borderLeft: `3px solid ${getStatusColor(booking.status)}`,
-                    }}>
-                    <span style={{ ...styles.statusText, color: getStatusColor(booking.status) }}>
-                      {getStatusText(booking.status)}
-                    </span>
-                  </div>
-                </div>
+                      borderLeftWidth: 3,
+                      borderLeftColor: getStatusColor(booking.status),
+                    },
+                  ]}
+                >
+                  <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>
+                    {getStatusText(booking.status)}
+                  </Text>
+                </View>
+              </View>
 
-                {/* Room Type */}
-                <div style={styles.roomType}>{booking.roomType}</div>
+              {/* Room Type */}
+              <Text style={styles.roomType}>{booking.roomType}</Text>
 
-                {/* Info Grid */}
-                <div style={styles.infoGrid}>
-                  <div style={styles.infoItem}>
-                    <CalendarCheck size={16} color="#10b981" />
-                    <div style={styles.infoTextContainer}>
-                      <div style={styles.infoLabel}>Check-in</div>
-                      <div style={styles.infoValue}>{formatDate(booking.checkIn)}</div>
-                    </div>
-                  </div>
+              {/* Info Grid */}
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <CalendarCheck size={16} color="#10b981" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Check-in</Text>
+                    <Text style={styles.infoValue}>{formatDate(booking.checkIn)}</Text>
+                  </View>
+                </View>
 
-                  <div style={styles.infoItem}>
-                    <CalendarCheck size={16} color="#ef4444" />
-                    <div style={styles.infoTextContainer}>
-                      <div style={styles.infoLabel}>Check-out</div>
-                      <div style={styles.infoValue}>{formatDate(booking.checkOut)}</div>
-                    </div>
-                  </div>
-                </div>
+                <View style={styles.infoItem}>
+                  <CalendarCheck size={16} color="#ef4444" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Check-out</Text>
+                    <Text style={styles.infoValue}>{formatDate(booking.checkOut)}</Text>
+                  </View>
+                </View>
+              </View>
 
-                <div style={styles.infoGrid}>
-                  <div style={styles.infoItem}>
-                    <Clock size={16} color="#f59e0b" />
-                    <div style={styles.infoTextContainer}>
-                      <div style={styles.infoLabel}>Duration</div>
-                      <div style={styles.infoValue}>{booking.duration} nights</div>
-                    </div>
-                  </div>
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <Clock size={16} color="#f59e0b" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Duration</Text>
+                    <Text style={styles.infoValue}>{booking.duration} nights</Text>
+                  </View>
+                </View>
 
-                  <div style={styles.infoItem}>
-                    <CreditCard size={16} color="#3b82f6" />
-                    <div style={styles.infoTextContainer}>
-                      <div style={styles.infoLabel}>Total Cost</div>
-                      <div style={styles.infoValue}>${booking.totalCost}</div>
-                    </div>
-                  </div>
-                </div>
+                <View style={styles.infoItem}>
+                  <CreditCard size={16} color="#3b82f6" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Total Cost</Text>
+                    <Text style={styles.infoValue}>₹{booking.totalCost}</Text>
+                  </View>
+                </View>
+              </View>
 
-                {/* View Details Button */}
-                <button style={styles.detailsButton}>
-                  <span style={styles.detailsButtonText}>View Details</span>
-                  <ChevronRight size={18} color="#3b82f6" />
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <style>
-        {`
-          @keyframes slideIn {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}
-      </style>
-    </div>
+              {/* View Details Button */}
+              <TouchableOpacity style={styles.detailsButton}>
+                <Text style={styles.detailsButtonText}>View Details</Text>
+                <ChevronRight size={18} color="#3b82f6" />
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const styles: { [key: string]: React.CSSProperties } = {
+const styles = StyleSheet.create({
   container: {
-    height: '100vh',
+    flex: 1,
     backgroundColor: '#f9fafb',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    display: 'flex',
-    flexDirection: 'column',
   },
   header: {
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   headerTop: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '20px',
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: '28px',
+    fontSize: 28,
     fontWeight: '700',
     color: '#111827',
-    margin: '0 0 4px 0',
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: '14px',
+    fontSize: 14,
     color: '#6b7280',
-    margin: 0,
   },
   filterButton: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#f9fafb',
-    border: '1px solid #e5e7eb',
-    display: 'flex',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
   },
   tabContainer: {
-    display: 'flex',
-    gap: '8px',
-    marginBottom: '16px',
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
   },
   tab: {
     flex: 1,
-    display: 'flex',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
-    padding: '12px 16px',
-    borderRadius: '10px',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
     backgroundColor: '#f9fafb',
-    border: '1px solid #e5e7eb',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   activeTab: {
     backgroundColor: '#3b82f6',
     borderColor: '#3b82f6',
   },
   tabText: {
-    fontSize: '14px',
+    fontSize: 14,
     fontWeight: '600',
     color: '#64748b',
   },
@@ -494,168 +504,171 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#ffffff',
   },
   tabBadge: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#64748b',
+    minWidth: 24,
+    height: 20,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     backgroundColor: '#e5e7eb',
-    padding: '2px 8px',
-    borderRadius: '12px',
-    minWidth: '24px',
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  tabBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  tabBadgeTextActive: {
     color: '#ffffff',
   },
   searchContainer: {
-    display: 'flex',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
+    gap: 12,
+    padding: 12,
     backgroundColor: '#f9fafb',
-    borderRadius: '10px',
-    border: '1px solid #e5e7eb',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   searchInput: {
     flex: 1,
-    fontSize: '14px',
+    fontSize: 14,
     color: '#111827',
-    border: 'none',
-    outline: 'none',
-    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
-    overflowY: 'auto',
-    padding: '20px',
-    boxSizing: 'border-box',
   },
   scrollContent: {
-    maxWidth: '1200px',
-    margin: '0 auto',
+    padding: 20,
   },
   bookingCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '20px',
-    marginBottom: '12px',
-    border: '1px solid #e5e7eb',
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-    transition: 'all 0.2s ease',
-    cursor: 'pointer',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   cardHeader: {
-    display: 'flex',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '12px',
+    marginBottom: 12,
   },
   guestInfo: {
-    display: 'flex',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: '12px',
+    gap: 12,
     flex: 1,
   },
   iconCircle: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#eff6ff',
-    display: 'flex',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   guestName: {
-    fontSize: '16px',
+    fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: '2px',
+    marginBottom: 2,
   },
   bookingId: {
-    fontSize: '12px',
+    fontSize: 12,
     color: '#9ca3af',
   },
   statusBadge: {
-    padding: '6px 12px',
-    borderRadius: '6px',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderLeftWidth: 3,
   },
   statusText: {
-    fontSize: '12px',
+    fontSize: 12,
     fontWeight: '600',
   },
   roomType: {
-    fontSize: '14px',
+    fontSize: 14,
     fontWeight: '500',
     color: '#475569',
-    marginBottom: '16px',
-    paddingLeft: '4px',
+    marginBottom: 16,
+    paddingLeft: 4,
   },
   infoGrid: {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '12px',
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
   },
   infoItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     backgroundColor: '#f9fafb',
-    padding: '10px',
-    borderRadius: '8px',
+    padding: 10,
+    borderRadius: 8,
   },
   infoTextContainer: {
     flex: 1,
   },
   infoLabel: {
-    fontSize: '11px',
+    fontSize: 11,
     color: '#9ca3af',
-    marginBottom: '2px',
+    marginBottom: 2,
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: 0.5,
   },
   infoValue: {
-    fontSize: '13px',
+    fontSize: 13,
     fontWeight: '600',
     color: '#111827',
   },
   detailsButton: {
-    display: 'flex',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: '12px',
-    padding: '10px',
+    marginTop: 12,
+    padding: 10,
     backgroundColor: '#eff6ff',
-    borderRadius: '8px',
-    gap: '4px',
-    border: 'none',
-    cursor: 'pointer',
-    width: '100%',
-    transition: 'all 0.2s ease',
+    borderRadius: 8,
+    gap: 4,
   },
   detailsButtonText: {
-    fontSize: '14px',
+    fontSize: 14,
     fontWeight: '600',
     color: '#3b82f6',
   },
   emptyState: {
-    textAlign: 'center',
-    padding: '80px 20px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 20,
   },
   emptyIcon: {
-    fontSize: '48px',
-    marginBottom: '16px',
+    fontSize: 48,
+    marginBottom: 16,
   },
   emptyStateText: {
-    fontSize: '18px',
+    fontSize: 18,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: '8px',
+    marginBottom: 8,
   },
   emptyStateSubtext: {
-    fontSize: '14px',
+    fontSize: 14,
     color: '#9ca3af',
+    textAlign: 'center',
   },
-};
+});
 
 export default BookingsScreen;

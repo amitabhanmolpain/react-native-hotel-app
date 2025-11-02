@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, MapPin, Star, Heart, SlidersHorizontal, User as UserIcon, Calendar, Users, Bed, Wifi, Coffee, Dumbbell } from 'lucide-react-native';
 import { useProperty } from '@/contexts/PropertyContext';
@@ -88,6 +88,9 @@ export default function EnhancedUserHomeScreen() {
   const { properties } = useProperty();
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [checkInDate, setCheckInDate] = useState<string>('2025-11-05');
+  const [checkOutDate, setCheckOutDate] = useState<string>('2025-11-08');
+  const [guests, setGuests] = useState<string>('2 Adults, 1 Room');
 
   const filteredProperties = properties.filter((property) =>
     property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,32 +163,73 @@ export default function EnhancedUserHomeScreen() {
 
           <View style={styles.quickBookingInputs}>
             <View style={styles.dateInputRow}>
-              <View style={styles.dateInput}>
+              <TouchableOpacity 
+                style={styles.dateInput}
+                activeOpacity={0.7}
+                onPress={() => {
+                  // Open date picker for check-in
+                  const today = new Date();
+                  const tomorrow = new Date(today);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  setCheckInDate(tomorrow.toISOString().split('T')[0]);
+                }}>
                 <Calendar size={18} color="#64748b" />
                 <View style={styles.dateInputText}>
                   <Text style={styles.dateLabel}>Check-in</Text>
-                  <Text style={styles.dateValue}>Nov 5, 2025</Text>
+                  <Text style={styles.dateValue}>
+                    {checkInDate ? new Date(checkInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
+                  </Text>
                 </View>
-              </View>
-              <View style={styles.dateInput}>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.dateInput}
+                activeOpacity={0.7}
+                onPress={() => {
+                  // Open date picker for check-out
+                  const checkIn = new Date(checkInDate);
+                  const nextDay = new Date(checkIn);
+                  nextDay.setDate(nextDay.getDate() + 1);
+                  setCheckOutDate(nextDay.toISOString().split('T')[0]);
+                }}>
                 <Calendar size={18} color="#64748b" />
                 <View style={styles.dateInputText}>
                   <Text style={styles.dateLabel}>Check-out</Text>
-                  <Text style={styles.dateValue}>Nov 8, 2025</Text>
+                  <Text style={styles.dateValue}>
+                    {checkOutDate ? new Date(checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
+                  </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.guestsInput}>
+            <TouchableOpacity 
+              style={styles.guestsInput}
+              activeOpacity={0.7}
+              onPress={() => {
+                // Could open a modal for guest selection
+                Alert.alert('Guests', 'Select number of guests and rooms', [
+                  { text: '1 Adult, 1 Room', onPress: () => setGuests('1 Adult, 1 Room') },
+                  { text: '2 Adults, 1 Room', onPress: () => setGuests('2 Adults, 1 Room') },
+                  { text: '2 Adults, 2 Rooms', onPress: () => setGuests('2 Adults, 2 Rooms') },
+                  { text: 'Cancel', style: 'cancel' },
+                ]);
+              }}>
               <Users size={18} color="#64748b" />
               <View style={styles.dateInputText}>
                 <Text style={styles.dateLabel}>Guests</Text>
-                <Text style={styles.dateValue}>2 Adults, 1 Room</Text>
+                <Text style={styles.dateValue}>{guests}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.searchRoomsButton} activeOpacity={0.8}>
+          <TouchableOpacity 
+            style={styles.searchRoomsButton} 
+            activeOpacity={0.8}
+            onPress={() => {
+              // Filter properties based on search criteria
+              if (checkInDate && checkOutDate && guests) {
+                setSearchQuery(`${checkInDate} ${checkOutDate} ${guests} guests`);
+              }
+            }}>
             <Search size={20} color="#fff" />
             <Text style={styles.searchRoomsButtonText}>Search Rooms</Text>
           </TouchableOpacity>
@@ -237,7 +281,20 @@ export default function EnhancedUserHomeScreen() {
                       </View>
                     </View>
 
-                    <TouchableOpacity style={styles.bookNowButton} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                      style={styles.bookNowButton} 
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        // Find property by name or use first available property
+                        const matchingProperty = properties.find(p => 
+                          p.name.toLowerCase().includes(offer.property.toLowerCase())
+                        );
+                        if (matchingProperty) {
+                          router.push(`/(user)/property/${matchingProperty.id}`);
+                        } else if (properties.length > 0) {
+                          router.push(`/(user)/property/${properties[0].id}`);
+                        }
+                      }}>
                       <Text style={styles.bookNowButtonText}>Book Now</Text>
                     </TouchableOpacity>
                   </View>
@@ -312,7 +369,7 @@ export default function EnhancedUserHomeScreen() {
                           <Text style={styles.ratingText}>{property.rating}</Text>
                         </View>
                       )}
-                      <Text style={styles.featuredPrice}>${property.price}/night</Text>
+                      <Text style={styles.featuredPrice}>₹{property.price}/night</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -370,9 +427,14 @@ export default function EnhancedUserHomeScreen() {
                   <View style={styles.eventFooter}>
                     <View>
                       <Text style={styles.eventPriceLabel}>From</Text>
-                      <Text style={styles.eventPrice}>${event.ticketPrice}</Text>
+                      <Text style={styles.eventPrice}>₹{event.ticketPrice}</Text>
                     </View>
-                    <TouchableOpacity style={styles.bookTicketButton} activeOpacity={0.8}>
+                    <TouchableOpacity 
+                      style={styles.bookTicketButton} 
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        router.push('/(user)/CreateEventScreen');
+                      }}>
                       <Text style={styles.bookTicketButtonText}>Book Ticket</Text>
                     </TouchableOpacity>
                   </View>
@@ -438,7 +500,7 @@ export default function EnhancedUserHomeScreen() {
                   ) : (
                     <Text style={styles.newPropertyBadge}>New</Text>
                   )}
-                  <Text style={styles.propertyPrice}>${property.price}<Text style={styles.priceUnit}>/night</Text></Text>
+                  <Text style={styles.propertyPrice}>₹{property.price}<Text style={styles.priceUnit}>/night</Text></Text>
                 </View>
               </View>
             </TouchableOpacity>

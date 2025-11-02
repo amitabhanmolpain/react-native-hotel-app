@@ -294,7 +294,7 @@ export default function ViewBookingsScreen() {
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.priceLabel}>Total:</Text>
-                <Text style={styles.priceValue}>${booking.totalPrice}</Text>
+                <Text style={styles.priceValue}>₹{booking.totalPrice}</Text>
               </View>
               <View style={styles.statusBadge}>
                 <Text
@@ -347,7 +347,7 @@ export default function ViewBookingsScreen() {
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.priceLabel}>Price per night:</Text>
-                <Text style={styles.priceValue}>${room.pricePerNight}</Text>
+                <Text style={styles.priceValue}>₹{room.pricePerNight}</Text>
               </View>
             </View>
           )}
