@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, MapPin, Star, Heart, SlidersHorizontal, User as UserIcon, Calendar, Users, Bed, Wifi, Coffee, Dumbbell } from 'lucide-react-native';
 import { useProperty } from '@/contexts/PropertyContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../supabaseClient';
 
 // Mock special offers/deals
 const specialOffers = [
@@ -88,9 +90,51 @@ export default function EnhancedUserHomeScreen() {
   const { properties } = useProperty();
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [checkInDate, setCheckInDate] = useState<string>('2025-11-05');
-  const [checkOutDate, setCheckOutDate] = useState<string>('2025-11-08');
+  const [checkInDate, setCheckInDate] = useState<string>('');
+  const [checkOutDate, setCheckOutDate] = useState<string>('');
   const [guests, setGuests] = useState<string>('2 Adults, 1 Room');
+  const [userName, setUserName] = useState('Guest');
+
+  useEffect(() => {
+    loadUserName();
+    initializeDates();
+  }, []);
+
+  const loadUserName = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (userData && userData.name) {
+          setUserName(userData.name);
+        } else {
+          const storedName = await AsyncStorage.getItem('userName');
+          if (storedName) {
+            setUserName(storedName);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user name:', error);
+    }
+  };
+
+  const initializeDates = () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date(tomorrow);
+    dayAfter.setDate(dayAfter.getDate() + 2);
+
+    setCheckInDate(tomorrow.toISOString().split('T')[0]);
+    setCheckOutDate(dayAfter.toISOString().split('T')[0]);
+  };
 
   const filteredProperties = properties.filter((property) =>
     property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,7 +166,7 @@ export default function EnhancedUserHomeScreen() {
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Welcome back</Text>
-            <Text style={styles.username}>John Doe</Text>
+            <Text style={styles.username}>{userName}</Text>
           </View>
           <TouchableOpacity style={styles.profileButton} activeOpacity={0.7}>
             <UserIcon color="#475569" size={24} />
@@ -221,14 +265,30 @@ export default function EnhancedUserHomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.searchRoomsButton} 
+          <TouchableOpacity
+            style={styles.searchRoomsButton}
             activeOpacity={0.8}
             onPress={() => {
-              // Filter properties based on search criteria
-              if (checkInDate && checkOutDate && guests) {
-                setSearchQuery(`${checkInDate} ${checkOutDate} ${guests} guests`);
+              if (!checkInDate || !checkOutDate) {
+                Alert.alert('Missing Dates', 'Please select check-in and check-out dates');
+                return;
               }
+
+              const checkIn = new Date(checkInDate);
+              const checkOut = new Date(checkOutDate);
+
+              if (checkOut <= checkIn) {
+                Alert.alert('Invalid Dates', 'Check-out date must be after check-in date');
+                return;
+              }
+
+              const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+
+              Alert.alert(
+                'Search Results',
+                `Searching for rooms:\n\nCheck-in: ${checkIn.toLocaleDateString()}\nCheck-out: ${checkOut.toLocaleDateString()}\nNights: ${nights}\nGuests: ${guests}\n\nShowing all available properties below.`,
+                [{ text: 'OK' }]
+              );
             }}>
             <Search size={20} color="#fff" />
             <Text style={styles.searchRoomsButtonText}>Search Rooms</Text>

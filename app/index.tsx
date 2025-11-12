@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { User, Lock, Mail } from 'lucide-react-native';
+import { supabase } from './supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -10,9 +12,74 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleUserAuth = () => {
-    router.push('/(user)/home');
+  const handleUserAuth = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    if (isSignUp && !name) {
+      Alert.alert('Error', 'Please enter your name');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (signUpError) throw signUpError;
+
+        if (authData.user) {
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert([{
+              id: authData.user.id,
+              name,
+              email,
+            }]);
+
+          if (insertError) throw insertError;
+
+          await AsyncStorage.setItem('userName', name);
+          Alert.alert('Success', 'Account created successfully!');
+          setIsSignUp(false);
+        }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+          } else if (userData) {
+            await AsyncStorage.setItem('userName', userData.name);
+          }
+
+          router.push('/(user)/home');
+        }
+      }
+    } catch (error: any) {
+      Alert.alert('Authentication Error', error.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBusinessOwner = () => {
@@ -78,12 +145,17 @@ export default function AuthScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.primaryButton}
+                style={[styles.primaryButton, loading && styles.buttonDisabled]}
                 onPress={handleUserAuth}
+                disabled={loading}
                 activeOpacity={0.8}>
-                <Text style={styles.primaryButtonText}>
-                  {isSignUp ? 'Sign Up' : 'Sign In'}
-                </Text>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>
+                    {isSignUp ? 'Sign Up' : 'Sign In'}
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
@@ -243,5 +315,8 @@ const styles = StyleSheet.create({
     color: '#e0e7f0',
     fontSize: 13,
     textAlign: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
