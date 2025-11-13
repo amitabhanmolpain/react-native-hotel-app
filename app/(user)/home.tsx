@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, MapPin, Star, Heart, SlidersHorizontal, User as UserIcon, Calendar, Users, Bed, Wifi, Coffee, Dumbbell } from 'lucide-react-native';
-import { useProperty } from '@/contexts/PropertyContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';
 
@@ -85,19 +84,40 @@ const upcomingEvents = [
   },
 ];
 
+interface Property {
+  id: string;
+  name: string;
+  type: 'hotel' | 'house';
+  city: string;
+  state: string;
+  location: string;
+  price: number;
+  rating: number;
+  reviews: number;
+  bedrooms: number;
+  bathrooms: number;
+  description: string;
+  images: string[];
+  amenities: string;
+  status: string;
+  featured: boolean;
+}
+
 export default function EnhancedUserHomeScreen() {
   const router = useRouter();
-  const { properties } = useProperty();
+  const [properties, setProperties] = useState<Property[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [checkInDate, setCheckInDate] = useState<string>('');
   const [checkOutDate, setCheckOutDate] = useState<string>('');
   const [guests, setGuests] = useState<string>('2 Adults, 1 Room');
   const [userName, setUserName] = useState('Guest');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadUserName();
     initializeDates();
+    fetchProperties();
   }, []);
 
   const loadUserName = async () => {
@@ -134,6 +154,45 @@ export default function EnhancedUserHomeScreen() {
 
     setCheckInDate(tomorrow.toISOString().split('T')[0]);
     setCheckOutDate(dayAfter.toISOString().split('T')[0]);
+  };
+
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('status', 'available')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching properties:', error);
+      } else if (data) {
+        const formattedProperties = data.map((prop: any) => ({
+          id: prop.id,
+          name: prop.name,
+          type: prop.type,
+          city: prop.city,
+          state: prop.state,
+          location: prop.location,
+          price: prop.price,
+          rating: prop.rating || 0,
+          reviews: prop.reviews || 0,
+          bedrooms: prop.bedrooms || 0,
+          bathrooms: prop.bathrooms || 0,
+          description: prop.description || '',
+          images: Array.isArray(prop.images) ? prop.images : [],
+          amenities: prop.amenities || '',
+          status: prop.status,
+          featured: prop.featured || false,
+        }));
+        setProperties(formattedProperties);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredProperties = properties.filter((property) =>
@@ -514,7 +573,18 @@ export default function EnhancedUserHomeScreen() {
             </View>
           </View>
 
-          {allProperties.map((property) => (
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#2563eb" />
+              <Text style={styles.loadingText}>Loading properties...</Text>
+            </View>
+          ) : allProperties.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No properties found</Text>
+              <Text style={styles.emptySubtext}>Try adjusting your search criteria</Text>
+            </View>
+          ) : (
+            allProperties.map((property) => (
             <TouchableOpacity
               key={property.id}
               style={styles.propertyCard}
@@ -564,7 +634,8 @@ export default function EnhancedUserHomeScreen() {
                 </View>
               </View>
             </TouchableOpacity>
-          ))}
+          ))
+          )}
         </View>
 
         {/* Event Hosting CTA - Moved to bottom */}
@@ -1218,5 +1289,31 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  loadingContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#64748b',
   },
 });

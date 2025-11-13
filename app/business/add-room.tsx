@@ -28,6 +28,8 @@ const AddRoomScreen: React.FC = () => {
     type: 'hotel', // 'hotel' or 'house'
     price: '',
     location: '',
+    city: '',
+    state: '',
     bedrooms: '',
     bathrooms: '',
     guests: '',
@@ -75,8 +77,8 @@ const AddRoomScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.price || !formData.location) {
-      Alert.alert('Validation Error', 'Please fill in all required fields (Name, Price, Location)');
+    if (!formData.name || !formData.price || !formData.location || !formData.city || !formData.state) {
+      Alert.alert('Validation Error', 'Please fill in all required fields (Name, Price, Location, City, State)');
       return;
     }
 
@@ -87,55 +89,37 @@ const AddRoomScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      // Upload images to Supabase storage
-      const uploadedImageUrls: string[] = [];
-      
-      for (const imageUri of images) {
-        const fileName = `property_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        const filePath = `${formData.type}/${fileName}`;
-        
-        // Convert image to blob
-        const response = await fetch(imageUri);
-        const blob = await response.blob();
-        
-        // Upload to Supabase storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('property-images')
-          .upload(filePath, blob, {
-            contentType: 'image/jpeg',
-            upsert: false,
-          });
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          // Use local URI as fallback for now
-          uploadedImageUrls.push(imageUri);
-        } else {
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('property-images')
-            .getPublicUrl(filePath);
-          uploadedImageUrls.push(urlData.publicUrl);
-        }
+      if (userError || !user) {
+        Alert.alert('Error', 'You must be logged in to add a property');
+        setLoading(false);
+        return;
       }
+
+      // For now, use image URLs directly (no storage upload needed for URLs)
+      const uploadedImageUrls: string[] = images;
 
       // Insert property into database
       const { data, error } = await supabase
         .from('properties')
         .insert([
           {
+            owner_id: user.id,
             name: formData.name,
             description: formData.description,
             type: formData.type,
             price: parseFloat(formData.price),
             location: formData.location,
+            city: formData.city,
+            state: formData.state,
             bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
             bathrooms: formData.bathrooms ? parseInt(formData.bathrooms) : null,
             guests: formData.guests ? parseInt(formData.guests) : null,
             amenities: formData.amenities,
             images: uploadedImageUrls,
             status: 'available',
-            created_at: new Date().toISOString(),
           },
         ])
         .select();
@@ -314,10 +298,34 @@ const AddRoomScreen: React.FC = () => {
               <MapPin size={20} color="#9ca3af" />
               <TextInput
                 style={[styles.input, styles.inputFlex]}
-                placeholder="Enter address or location"
+                placeholder="Enter full address"
                 placeholderTextColor="#9ca3af"
                 value={formData.location}
                 onChangeText={(text) => setFormData({ ...formData, location: text })}
+              />
+            </View>
+          </View>
+
+          <View style={styles.detailsGrid}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>City *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter city"
+                placeholderTextColor="#9ca3af"
+                value={formData.city}
+                onChangeText={(text) => setFormData({ ...formData, city: text })}
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>State *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter state"
+                placeholderTextColor="#9ca3af"
+                value={formData.state}
+                onChangeText={(text) => setFormData({ ...formData, state: text })}
               />
             </View>
           </View>

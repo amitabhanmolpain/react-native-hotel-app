@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   Animated,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +25,7 @@ import {
   Eye,
   MapPin,
 } from 'lucide-react-native';
+import { supabase } from '../../supabaseClient';
 
 const { width } = Dimensions.get('window');
 
@@ -276,6 +278,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 const Dashboard: React.FC = () => {
   const router = useRouter();
   const headerFadeAnim = useRef(new Animated.Value(0)).current;
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Animated.timing(headerFadeAnim, {
@@ -283,43 +287,76 @@ const Dashboard: React.FC = () => {
       duration: 800,
       useNativeDriver: true,
     }).start();
+    fetchProperties();
   }, []);
 
-  // Dummy Data
+  const fetchProperties = async () => {
+    try {
+      setLoading(true);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching properties:', error);
+      } else if (data) {
+        setProperties(data);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const availableProperties = properties.filter(p => p.status === 'available').length;
+  const occupiedProperties = properties.filter(p => p.status === 'occupied').length;
+  const totalRevenue = properties.reduce((sum, p) => sum + (p.price || 0), 0);
+
   const stats: Omit<StatCardProps, 'delay'>[] = [
     {
-      title: 'Total Rooms',
-      value: '45',
+      title: 'Total Properties',
+      value: properties.length.toString(),
       icon: Home,
       gradient: ['#6366f1', '#8b5cf6'],
-      subtitle: '+3 this month',
+      subtitle: 'Your listings',
     },
     {
       title: 'Occupied',
-      value: '32',
+      value: occupiedProperties.toString(),
       icon: Bed,
       gradient: ['#06b6d4', '#3b82f6'],
-      subtitle: '71% occupancy',
+      subtitle: properties.length > 0 ? `${Math.round((occupiedProperties / properties.length) * 100)}% occupancy` : '0% occupancy',
     },
     {
       title: 'Available',
-      value: '13',
+      value: availableProperties.toString(),
       icon: TrendingUp,
       gradient: ['#10b981', '#14b8a6'],
       subtitle: 'Ready to book',
     },
     {
-      title: 'Revenue',
-      value: '₹52.4K',
+      title: 'Avg Price',
+      value: properties.length > 0 ? `₹${Math.round(totalRevenue / properties.length)}` : '₹0',
       icon: DollarSign,
       gradient: ['#f59e0b', '#eab308'],
-      subtitle: '+18% this week',
+      subtitle: 'Per night',
     },
   ];
 
   const quickActions: Omit<QuickActionProps, 'delay'>[] = [
     {
-      title: 'Add Room',
+      title: 'Add Property',
       icon: Plus,
       color: '#6366f1',
       onPress: () => router.push('/business/add-room'),
@@ -338,40 +375,14 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const properties: Omit<PropertyCardProps, 'delay'>[] = [
-    {
-      id: '1',
-      name: 'Deluxe Ocean Suite',
-      image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400',
-      price: 299,
-      status: 'Available',
-      location: 'Floor 12, Room 1205',
-    },
-    {
-      id: '2',
-      name: 'Executive Room',
-      image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400',
-      price: 189,
-      status: 'Occupied',
-      location: 'Floor 8, Room 805',
-    },
-    {
-      id: '3',
-      name: 'Premium Suite',
-      image: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400',
-      price: 349,
-      status: 'Available',
-      location: 'Floor 15, Room 1502',
-    },
-    {
-      id: '4',
-      name: 'Standard Room',
-      image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400',
-      price: 129,
-      status: 'Maintenance',
-      location: 'Floor 3, Room 302',
-    },
-  ];
+  const propertyCards: Omit<PropertyCardProps, 'delay'>[] = properties.map(prop => ({
+    id: prop.id,
+    name: prop.name,
+    image: Array.isArray(prop.images) && prop.images.length > 0 ? prop.images[0] : 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400',
+    price: prop.price || 0,
+    status: prop.status === 'available' ? 'Available' : prop.status === 'occupied' ? 'Occupied' : 'Maintenance',
+    location: `${prop.city}, ${prop.state}`,
+  }));
 
   const chartData: ChartData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -474,9 +485,19 @@ const Dashboard: React.FC = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {properties.map((property, index) => (
-            <PropertyCard key={property.id} {...property} delay={index * 100} />
-          ))}
+          {loading ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <Text style={{ color: '#6b7280', fontSize: 14 }}>Loading properties...</Text>
+            </View>
+          ) : propertyCards.length === 0 ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <Text style={{ color: '#6b7280', fontSize: 14 }}>No properties added yet</Text>
+            </View>
+          ) : (
+            propertyCards.map((property, index) => (
+              <PropertyCard key={property.id} {...property} delay={index * 100} />
+            ))
+          )}
         </View>
 
         <View style={{ height: 40 }} />
