@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,39 +33,35 @@ import {
   Home,
   Building2,
 } from 'lucide-react-native';
-import { useProperty } from '@/contexts/PropertyContext';
+import { supabase } from '@/app/supabaseClient';
 
 const { width } = Dimensions.get('window');
+
+interface Property {
+  id: string;
+  name: string;
+  type: 'hotel' | 'house';
+  city: string;
+  state: string;
+  location: string;
+  price: number;
+  rating: number;
+  reviews: number;
+  bedrooms: number;
+  bathrooms: number;
+  guests: number | null;
+  description: string;
+  images: string[];
+  amenities: string;
+  owner_name: string;
+  status: string;
+}
 
 export default function PropertyDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { properties } = useProperty();
-  
-  // Find property by ID or use mock data
-  const property = properties.find(p => p.id === id) || {
-    id: id || '1',
-    name: 'Luxury Beachfront Villa',
-    type: 'hotel',
-    city: 'Miami',
-    state: 'Florida',
-    address: '123 Ocean Drive, Miami Beach, FL 33139',
-    rating: 4.8,
-    reviews: 128,
-    bedrooms: 4,
-    bathrooms: 3,
-    price: 450,
-    description: 'Experience luxury living in this stunning beachfront villa. With panoramic ocean views, modern amenities, and direct beach access, this property offers the perfect getaway. The spacious interior features high-end finishes, a gourmet kitchen, and floor-to-ceiling windows that flood the space with natural light.',
-    amenities: ['WiFi', 'Air Conditioning', 'TV', 'Coffee Maker'],
-    host: 'Sarah Johnson',
-    hostImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop',
-    ],
-  };
-
+  const [property, setProperty] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -75,6 +71,56 @@ export default function PropertyDetailScreen() {
   const [activeTab, setActiveTab] = useState<'details' | 'amenities' | 'host'>('details');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  useEffect(() => {
+    fetchProperty();
+  }, [id]);
+
+  const fetchProperty = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching property:', error);
+        Alert.alert('Error', 'Failed to load property details');
+        return;
+      }
+
+      if (data) {
+        setProperty(data);
+      } else {
+        Alert.alert('Not Found', 'Property not found');
+        router.back();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const amenitiesList = property?.amenities ? property.amenities.split(',').map(a => a.trim()) : [];
+  const maxGuests = property?.guests || (property?.bedrooms ? property.bedrooms * 2 : 2);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading property...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!property) {
+    return null;
+  }
+
   const amenityIcons: { [key: string]: any } = {
     'WiFi': Wifi,
     'Air Conditioning': Wind,
@@ -82,11 +128,12 @@ export default function PropertyDetailScreen() {
     'Coffee Maker': Coffee,
   };
 
-  const handleBooking = () => {
+  const handleBooking = async () => {
     if (!checkIn || !checkOut) {
       Alert.alert('Validation Error', 'Please fill in check-in and check-out dates');
       return;
     }
+    await saveBooking();
     setShowBookingModal(false);
     setShowSuccessModal(true);
     setTimeout(() => {
@@ -103,6 +150,37 @@ export default function PropertyDetailScreen() {
     return property.price * (nights || 3);
   };
 
+  const saveBooking = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Error', 'You must be logged in to book');
+        return;
+      }
+
+      const checkInDate = new Date(checkIn);
+      const checkOutDate = new Date(checkOut);
+      const nightsCount = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      const { error } = await supabase
+        .from('bookings')
+        .insert([{
+          property_id: property.id,
+          user_id: user.id,
+          check_in: checkIn,
+          check_out: checkOut,
+          guests: parseInt(guests),
+          total_cost: calculateTotal() + 50,
+          nights: nightsCount,
+          status: 'confirmed'
+        }]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving booking:', error);
+    }
+  };
+
   const nights = checkIn && checkOut 
     ? Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24))
     : 3;
@@ -113,25 +191,27 @@ export default function PropertyDetailScreen() {
         {/* Image Gallery */}
         <View style={styles.imageSection}>
           <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: property.images[currentImageIndex] || property.images[0] }}
+            <Image
+              source={{ uri: property.images && property.images.length > 0 ? property.images[currentImageIndex] || property.images[0] : 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800' }}
               style={styles.mainImage}
               resizeMode="cover"
             />
             
             {/* Image Navigation Dots */}
-            <View style={styles.imageIndicator}>
-              {property.images.map((_, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => setCurrentImageIndex(index)}
-                  style={[
-                    styles.indicator,
-                    currentImageIndex === index && styles.indicatorActive,
-                  ]}
-                />
-              ))}
-            </View>
+            {property.images && property.images.length > 1 && (
+              <View style={styles.imageIndicator}>
+                {property.images.map((_, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setCurrentImageIndex(index)}
+                    style={[
+                      styles.indicator,
+                      currentImageIndex === index && styles.indicatorActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
 
             {/* Back Button */}
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -159,24 +239,26 @@ export default function PropertyDetailScreen() {
           </View>
 
           {/* Thumbnail Gallery */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.thumbnailGallery}
-            contentContainerStyle={styles.thumbnailGalleryContent}
-          >
-            {property.images.map((image, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setCurrentImageIndex(index)}
-                style={[
-                  styles.thumbnail,
-                  currentImageIndex === index && styles.thumbnailActive,
-                ]}>
-                <Image source={{ uri: image }} style={styles.thumbnailImage} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {property.images && property.images.length > 1 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.thumbnailGallery}
+              contentContainerStyle={styles.thumbnailGalleryContent}
+            >
+              {property.images.map((image, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setCurrentImageIndex(index)}
+                  style={[
+                    styles.thumbnail,
+                    currentImageIndex === index && styles.thumbnailActive,
+                  ]}>
+                  <Image source={{ uri: image }} style={styles.thumbnailImage} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Content Section */}
@@ -190,11 +272,13 @@ export default function PropertyDetailScreen() {
                 <Text style={styles.locationText}>{property.city}, {property.state}</Text>
               </View>
             </View>
-            <View style={styles.ratingContainer}>
-              <Star size={20} color="#fbbf24" fill="#fbbf24" />
-              <Text style={styles.ratingText}>{property.rating}</Text>
-              <Text style={styles.reviewsText}>({property.reviews})</Text>
-            </View>
+            {property.rating > 0 && (
+              <View style={styles.ratingContainer}>
+                <Star size={20} color="#fbbf24" fill="#fbbf24" />
+                <Text style={styles.ratingText}>{property.rating}</Text>
+                <Text style={styles.reviewsText}>({property.reviews})</Text>
+              </View>
+            )}
           </View>
 
           {/* Property Type Tag */}
@@ -221,7 +305,7 @@ export default function PropertyDetailScreen() {
             </View>
             <View style={styles.statCard}>
               <Users size={24} color="#3b82f6" />
-              <Text style={styles.statValue}>{property.bedrooms * 2}</Text>
+              <Text style={styles.statValue}>{maxGuests}</Text>
               <Text style={styles.statLabel}>Guests</Text>
             </View>
           </View>
@@ -256,10 +340,10 @@ export default function PropertyDetailScreen() {
             {activeTab === 'details' && (
               <View style={styles.tabContentInner}>
                 <Text style={styles.sectionTitle}>About this property</Text>
-                <Text style={styles.description}>{property.description}</Text>
+                <Text style={styles.description}>{property.description || 'No description available.'}</Text>
                 <View style={styles.addressCard}>
                   <MapPin size={20} color="#3b82f6" />
-                  <Text style={styles.address}>{property.address}</Text>
+                  <Text style={styles.address}>{property.location}</Text>
                 </View>
               </View>
             )}
@@ -267,20 +351,24 @@ export default function PropertyDetailScreen() {
             {activeTab === 'amenities' && (
               <View style={styles.tabContentInner}>
                 <Text style={styles.sectionTitle}>Available amenities</Text>
-                <View style={styles.amenitiesGrid}>
-                  {property.amenities.map((amenity, index) => {
-                    const IconComponent = amenityIcons[amenity] || Wifi;
-                    return (
-                      <View key={index} style={styles.amenityCard}>
-                        <View style={styles.amenityIcon}>
-                          <IconComponent size={24} color="#3b82f6" />
+                {amenitiesList.length > 0 ? (
+                  <View style={styles.amenitiesGrid}>
+                    {amenitiesList.map((amenity, index) => {
+                      const IconComponent = amenityIcons[amenity] || Wifi;
+                      return (
+                        <View key={index} style={styles.amenityCard}>
+                          <View style={styles.amenityIcon}>
+                            <IconComponent size={24} color="#3b82f6" />
+                          </View>
+                          <Text style={styles.amenityText}>{amenity}</Text>
+                          <Check size={18} color="#10b981" />
                         </View>
-                        <Text style={styles.amenityText}>{amenity}</Text>
-                        <Check size={18} color="#10b981" />
-                      </View>
-                    );
-                  })}
-                </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.description}>No amenities listed</Text>
+                )}
               </View>
             )}
 
@@ -288,18 +376,18 @@ export default function PropertyDetailScreen() {
               <View style={styles.tabContentInner}>
                 <Text style={styles.sectionTitle}>Meet your host</Text>
                 <View style={styles.hostCard}>
-                  <Image source={{ uri: property.hostImage }} style={styles.hostImage} />
+                  <Image source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200' }} style={styles.hostImage} />
                   <View style={styles.hostInfo}>
-                    <Text style={styles.hostName}>{property.host}</Text>
+                    <Text style={styles.hostName}>{property.owner_name || 'Property Owner'}</Text>
                     <Text style={styles.hostLabel}>Property Owner</Text>
                     <View style={styles.hostStats}>
                       <View style={styles.hostStat}>
                         <Star size={16} color="#fbbf24" fill="#fbbf24" />
-                        <Text style={styles.hostStatText}>4.9 rating</Text>
+                        <Text style={styles.hostStatText}>Verified Owner</Text>
                       </View>
                       <View style={styles.hostStat}>
                         <Home size={16} color="#3b82f6" />
-                        <Text style={styles.hostStatText}>12 properties</Text>
+                        <Text style={styles.hostStatText}>Property listing</Text>
                       </View>
                     </View>
                   </View>
@@ -980,5 +1068,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+    marginTop: 16,
   },
 });

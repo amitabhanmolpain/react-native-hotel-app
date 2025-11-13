@@ -5,6 +5,7 @@
     - `properties`
       - `id` (uuid, primary key, auto-generated)
       - `owner_id` (uuid, foreign key to auth.users)
+      - `owner_name` (text) - Property owner's name
       - `name` (text, required) - Property name
       - `description` (text) - Property description
       - `type` (text, required) - 'hotel' or 'house'
@@ -40,6 +41,7 @@
 CREATE TABLE IF NOT EXISTS properties (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_name text,
   name text NOT NULL,
   description text,
   type text NOT NULL CHECK (type IN ('hotel', 'house')),
