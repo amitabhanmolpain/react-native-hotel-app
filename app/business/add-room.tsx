@@ -98,6 +98,22 @@ const AddRoomScreen: React.FC = () => {
         return;
       }
 
+      // Get user details including name
+      const { data: userData, error: userDataError } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (userDataError) {
+        console.error('Error fetching user data:', userDataError);
+        Alert.alert('Error', 'Failed to retrieve user information. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const ownerName = userData?.name || user.email || 'Unknown Owner';
+
       // For now, use image URLs directly (no storage upload needed for URLs)
       const uploadedImageUrls: string[] = images;
 
@@ -107,6 +123,7 @@ const AddRoomScreen: React.FC = () => {
         .insert([
           {
             owner_id: user.id,
+            owner_name: ownerName,
             name: formData.name,
             description: formData.description,
             type: formData.type,

@@ -54,6 +54,7 @@ interface PropertyCardProps {
   price: number;
   status: 'Available' | 'Occupied' | 'Maintenance';
   location: string;
+  ownerName: string;
   delay?: number;
 }
 
@@ -190,6 +191,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   price,
   status,
   location,
+  ownerName,
   delay = 0,
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -239,7 +241,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         <Image source={{ uri: image }} style={styles.propertyImage} />
         <View style={styles.propertyInfo}>
           <View style={styles.propertyHeader}>
-            <Text style={styles.propertyName}>{name}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.propertyName}>{name}</Text>
+              <Text style={styles.ownerNameText}>By {ownerName}</Text>
+            </View>
             <View
               style={[
                 styles.statusBadge,
@@ -382,6 +387,7 @@ const Dashboard: React.FC = () => {
     price: prop.price || 0,
     status: prop.status === 'available' ? 'Available' : prop.status === 'occupied' ? 'Occupied' : 'Maintenance',
     location: `${prop.city}, ${prop.state}`,
+    ownerName: prop.owner_name || 'Owner',
   }));
 
   const chartData: ChartData = {
@@ -713,6 +719,12 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     flex: 1,
     marginRight: 8,
+  },
+  ownerNameText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748b',
+    marginTop: 2,
   },
   statusBadge: {
     flexDirection: 'row',
