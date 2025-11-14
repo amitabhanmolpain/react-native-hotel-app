@@ -62,8 +62,7 @@ const BookingsScreen: React.FC = () => {
           status,
           property_id,
           user_id,
-          properties!inner (name, owner_id),
-          users!bookings_user_id_fkey (name)
+          properties!inner (name, owner_id)
         `)
         .eq('properties.owner_id', user.id)
         .order('created_at', { ascending: false });
@@ -75,9 +74,18 @@ const BookingsScreen: React.FC = () => {
       }
 
       if (bookingsData) {
+        const userIds = [...new Set(bookingsData.map(b => b.user_id))];
+
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, name')
+          .in('id', userIds);
+
+        const usersMap = new Map(usersData?.map(u => [u.id, u.name]) || []);
+
         const formattedBookings: Booking[] = bookingsData.map((booking: any) => ({
           id: booking.id,
-          guestName: booking.users?.name || 'Guest',
+          guestName: usersMap.get(booking.user_id) || 'Guest',
           propertyName: booking.properties?.name || 'Property',
           checkIn: booking.check_in,
           checkOut: booking.check_out,
