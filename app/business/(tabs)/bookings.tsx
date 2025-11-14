@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,177 +8,117 @@ import {
   SafeAreaView,
   TextInput,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { User, CalendarCheck, Clock, CreditCard, Search, ChevronRight, Filter } from 'lucide-react-native';
+import { supabase } from '../../supabaseClient';
 
 // Types
 interface Booking {
   id: string;
   guestName: string;
-  roomType: string;
+  propertyName: string;
   checkIn: string;
   checkOut: string;
-  duration: number;
+  nights: number;
   totalCost: number;
+  guests: number;
   status: 'confirmed' | 'pending' | 'checked-in' | 'checked-out' | 'cancelled';
 }
 
 type TabType = 'recent' | 'checkins' | 'checkouts';
 
-// Dummy Data
-const recentBookings: Booking[] = [
-  {
-    id: 'B001',
-    guestName: 'Sarah Johnson',
-    roomType: 'Deluxe Suite',
-    checkIn: '2025-10-28',
-    checkOut: '2025-11-01',
-    duration: 4,
-    totalCost: 1200,
-    status: 'confirmed',
-  },
-  {
-    id: 'B002',
-    guestName: 'Michael Chen',
-    roomType: 'Standard Room',
-    checkIn: '2025-10-30',
-    checkOut: '2025-11-02',
-    duration: 3,
-    totalCost: 450,
-    status: 'pending',
-  },
-  {
-    id: 'B003',
-    guestName: 'Emma Williams',
-    roomType: 'Presidential Suite',
-    checkIn: '2025-11-01',
-    checkOut: '2025-11-05',
-    duration: 4,
-    totalCost: 3200,
-    status: 'confirmed',
-  },
-  {
-    id: 'B004',
-    guestName: 'David Martinez',
-    roomType: 'Family Room',
-    checkIn: '2025-10-29',
-    checkOut: '2025-10-31',
-    duration: 2,
-    totalCost: 380,
-    status: 'cancelled',
-  },
-  {
-    id: 'B005',
-    guestName: 'Jessica Brown',
-    roomType: 'Ocean View Suite',
-    checkIn: '2025-11-02',
-    checkOut: '2025-11-06',
-    duration: 4,
-    totalCost: 1800,
-    status: 'confirmed',
-  },
-  {
-    id: 'B006',
-    guestName: 'Daniel Lee',
-    roomType: 'Executive Suite',
-    checkIn: '2025-10-31',
-    checkOut: '2025-11-03',
-    duration: 3,
-    totalCost: 1050,
-    status: 'pending',
-  },
-];
-
-const checkInBookings: Booking[] = [
-  {
-    id: 'C001',
-    guestName: 'Robert Taylor',
-    roomType: 'Deluxe Suite',
-    checkIn: '2025-10-30',
-    checkOut: '2025-11-03',
-    duration: 4,
-    totalCost: 1400,
-    status: 'confirmed',
-  },
-  {
-    id: 'C002',
-    guestName: 'Lisa Anderson',
-    roomType: 'Ocean View Room',
-    checkIn: '2025-10-30',
-    checkOut: '2025-11-01',
-    duration: 2,
-    totalCost: 620,
-    status: 'confirmed',
-  },
-  {
-    id: 'C003',
-    guestName: 'James Brown',
-    roomType: 'Standard Room',
-    checkIn: '2025-10-30',
-    checkOut: '2025-11-04',
-    duration: 5,
-    totalCost: 750,
-    status: 'pending',
-  },
-  {
-    id: 'C004',
-    guestName: 'Maria Garcia',
-    roomType: 'Luxury Suite',
-    checkIn: '2025-10-30',
-    checkOut: '2025-11-02',
-    duration: 3,
-    totalCost: 1350,
-    status: 'confirmed',
-  },
-];
-
-const checkOutBookings: Booking[] = [
-  {
-    id: 'O001',
-    guestName: 'Patricia Davis',
-    roomType: 'Executive Suite',
-    checkIn: '2025-10-27',
-    checkOut: '2025-10-30',
-    duration: 3,
-    totalCost: 1050,
-    status: 'checked-in',
-  },
-  {
-    id: 'O002',
-    guestName: 'Christopher Wilson',
-    roomType: 'Standard Room',
-    checkIn: '2025-10-28',
-    checkOut: '2025-10-30',
-    duration: 2,
-    totalCost: 300,
-    status: 'checked-in',
-  },
-  {
-    id: 'O003',
-    guestName: 'Jennifer Moore',
-    roomType: 'Deluxe Suite',
-    checkIn: '2025-10-26',
-    checkOut: '2025-10-30',
-    duration: 4,
-    totalCost: 1400,
-    status: 'checked-in',
-  },
-];
 
 const BookingsScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('recent');
   const [searchQuery, setSearchQuery] = useState('');
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          check_in,
+          check_out,
+          guests,
+          nights,
+          total_cost,
+          status,
+          property_id,
+          user_id,
+          properties!inner (name, owner_id),
+          users!inner (name)
+        `)
+        .eq('properties.owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
+        setAllBookings([]);
+        return;
+      }
+
+      if (bookingsData) {
+        const formattedBookings: Booking[] = bookingsData.map((booking: any) => ({
+          id: booking.id,
+          guestName: booking.users?.name || 'Guest',
+          propertyName: booking.properties?.name || 'Property',
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          nights: booking.nights,
+          totalCost: parseFloat(booking.total_cost),
+          guests: booking.guests,
+          status: booking.status,
+        }));
+        setAllBookings(formattedBookings);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setAllBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getBookingsData = (): Booking[] => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     switch (activeTab) {
       case 'recent':
-        return recentBookings;
+        return allBookings;
       case 'checkins':
-        return checkInBookings;
+        return allBookings.filter((booking) => {
+          const checkInDate = new Date(booking.checkIn);
+          checkInDate.setHours(0, 0, 0, 0);
+          return checkInDate.getTime() === today.getTime() &&
+                 (booking.status === 'confirmed' || booking.status === 'pending');
+        });
       case 'checkouts':
-        return checkOutBookings;
+        return allBookings.filter((booking) => {
+          const checkOutDate = new Date(booking.checkOut);
+          checkOutDate.setHours(0, 0, 0, 0);
+          return checkOutDate.getTime() === today.getTime() &&
+                 booking.status === 'checked-in';
+        });
       default:
-        return recentBookings;
+        return allBookings;
     }
   };
 
@@ -220,13 +160,26 @@ const BookingsScreen: React.FC = () => {
   };
 
   const getTabCount = (tab: TabType): number => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     switch (tab) {
       case 'recent':
-        return recentBookings.length;
+        return allBookings.length;
       case 'checkins':
-        return checkInBookings.length;
+        return allBookings.filter((booking) => {
+          const checkInDate = new Date(booking.checkIn);
+          checkInDate.setHours(0, 0, 0, 0);
+          return checkInDate.getTime() === today.getTime() &&
+                 (booking.status === 'confirmed' || booking.status === 'pending');
+        }).length;
       case 'checkouts':
-        return checkOutBookings.length;
+        return allBookings.filter((booking) => {
+          const checkOutDate = new Date(booking.checkOut);
+          checkOutDate.setHours(0, 0, 0, 0);
+          return checkOutDate.getTime() === today.getTime() &&
+                 booking.status === 'checked-in';
+        }).length;
       default:
         return 0;
     }
@@ -336,12 +289,17 @@ const BookingsScreen: React.FC = () => {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {filteredBookings.length === 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading bookings...</Text>
+          </View>
+        ) : filteredBookings.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔍</Text>
             <Text style={styles.emptyStateText}>No bookings found</Text>
@@ -379,8 +337,8 @@ const BookingsScreen: React.FC = () => {
                 </View>
               </View>
 
-              {/* Room Type */}
-              <Text style={styles.roomType}>{booking.roomType}</Text>
+              {/* Property Name */}
+              <Text style={styles.roomType}>{booking.propertyName}</Text>
 
               {/* Info Grid */}
               <View style={styles.infoGrid}>
@@ -406,7 +364,7 @@ const BookingsScreen: React.FC = () => {
                   <Clock size={16} color="#f59e0b" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Duration</Text>
-                    <Text style={styles.infoValue}>{booking.duration} nights</Text>
+                    <Text style={styles.infoValue}>{booking.nights} nights</Text>
                   </View>
                 </View>
 
@@ -668,6 +626,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
   },
 });
 
