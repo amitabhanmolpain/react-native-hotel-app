@@ -34,6 +34,8 @@ import {
   Building2,
 } from 'lucide-react-native';
 import { supabase } from '@/app/supabaseClient';
+import { DatePickerModal } from '@/components/DatePickerModal';
+import { Toast } from '@/components/Toast';
 
 const { width } = Dimensions.get('window');
 
@@ -70,6 +72,11 @@ export default function PropertyDetailScreen() {
   const [guests, setGuests] = useState('2');
   const [activeTab, setActiveTab] = useState<'details' | 'amenities' | 'host'>('details');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showCheckInPicker, setShowCheckInPicker] = useState(false);
+  const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
     fetchProperty();
@@ -130,16 +137,34 @@ export default function PropertyDetailScreen() {
 
   const handleBooking = async () => {
     if (!checkIn || !checkOut) {
-      Alert.alert('Validation Error', 'Please fill in check-in and check-out dates');
+      setToastMessage('Please fill in check-in and check-out dates');
+      setToastType('error');
+      setToastVisible(true);
       return;
     }
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    if (checkOutDate <= checkInDate) {
+      setToastMessage('Check-out date must be after check-in date');
+      setToastType('error');
+      setToastVisible(true);
+      return;
+    }
+
     await saveBooking();
     setShowBookingModal(false);
-    setShowSuccessModal(true);
+    setToastMessage('Booking confirmed successfully!');
+    setToastType('success');
+    setToastVisible(true);
+
     setTimeout(() => {
-      setShowSuccessModal(false);
+      setCheckIn('');
+      setCheckOut('');
+      setGuests('2');
       router.back();
-    }, 3000);
+    }, 2000);
   };
 
   const calculateTotal = () => {
@@ -441,30 +466,37 @@ export default function PropertyDetailScreen() {
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Check-in Date</Text>
-                <View style={styles.inputContainer}>
+                <TouchableOpacity
+                  style={styles.inputContainer}
+                  onPress={() => setShowCheckInPicker(true)}
+                >
                   <Calendar size={20} color="#64748b" />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={checkIn}
-                    onChangeText={setCheckIn}
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
+                  <Text style={[styles.input, { color: checkIn ? '#1e293b' : '#9ca3af' }]}>
+                    {checkIn || 'Select check-in date'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Check-out Date</Text>
-                <View style={styles.inputContainer}>
-                  <Calendar size={20} color="#64748b" />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={checkOut}
-                    onChangeText={setCheckOut}
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
+                <TouchableOpacity
+                  style={styles.inputContainer}
+                  onPress={() => {
+                    if (!checkIn) {
+                      setToastMessage('Please select check-in date first');
+                      setToastType('error');
+                      setToastVisible(true);
+                      return;
+                    }
+                    setShowCheckOutPicker(true);
+                  }}
+                  disabled={!checkIn}
+                >
+                  <Calendar size={20} color={checkIn ? '#64748b' : '#cbd5e1'} />
+                  <Text style={[styles.input, { color: checkOut ? '#1e293b' : checkIn ? '#9ca3af' : '#cbd5e1' }]}>
+                    {checkOut || 'Select check-out date'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.inputGroup}>
@@ -507,24 +539,35 @@ export default function PropertyDetailScreen() {
         </View>
       </Modal>
 
-      {/* Success Modal */}
-      <Modal
-        visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}>
-        <View style={styles.successOverlay}>
-          <View style={styles.successModal}>
-            <View style={styles.successIcon}>
-              <Check size={48} color="#ffffff" />
-            </View>
-            <Text style={styles.successTitle}>Booking Confirmed!</Text>
-            <Text style={styles.successText}>
-              Your reservation at {property.name} has been confirmed.
-            </Text>
-          </View>
-        </View>
-      </Modal>
+      {/* Date Pickers */}
+      <DatePickerModal
+        visible={showCheckInPicker}
+        onClose={() => setShowCheckInPicker(false)}
+        onSelectDate={(date) => {
+          setCheckIn(date);
+          setShowCheckInPicker(false);
+        }}
+        minDate={new Date()}
+      />
+
+      <DatePickerModal
+        visible={showCheckOutPicker}
+        onClose={() => setShowCheckOutPicker(false)}
+        onSelectDate={(date) => {
+          setCheckOut(date);
+          setShowCheckOutPicker(false);
+        }}
+        minDate={checkIn ? new Date(checkIn) : new Date()}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        duration={2000}
+        onHide={() => setToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -974,6 +1017,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: '#1e293b',
+    paddingVertical: 4,
   },
   priceBreakdown: {
     backgroundColor: '#f8fafc',
