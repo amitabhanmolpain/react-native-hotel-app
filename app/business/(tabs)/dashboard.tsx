@@ -285,6 +285,8 @@ const Dashboard: React.FC = () => {
   const headerFadeAnim = useRef(new Animated.Value(0)).current;
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [weeklyBookings, setWeeklyBookings] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
+  const [weekDays, setWeekDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
   useEffect(() => {
     Animated.timing(headerFadeAnim, {
@@ -293,6 +295,7 @@ const Dashboard: React.FC = () => {
       useNativeDriver: true,
     }).start();
     fetchProperties();
+    fetchWeeklyBookings();
   }, []);
 
   const fetchProperties = async () => {
@@ -321,6 +324,63 @@ const Dashboard: React.FC = () => {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWeeklyBookings = async () => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) return;
+
+      // Get bookings for properties owned by this user in the last 7 days
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          created_at,
+          property_id,
+          properties!inner (owner_id)
+        `)
+        .eq('properties.owner_id', user.id)
+        .gte('created_at', new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true });
+
+      if (bookingsError) {
+        console.error('Error fetching bookings:', bookingsError);
+        return;
+      }
+
+      // Create array for last 7 days
+      const last7Days = [];
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const counts = new Array(7).fill(0);
+      const labels = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        last7Days.push(date);
+        labels.push(dayNames[date.getDay()]);
+      }
+
+      // Count bookings per day
+      if (bookingsData) {
+        bookingsData.forEach((booking: any) => {
+          const bookingDate = new Date(booking.created_at);
+          bookingDate.setHours(0, 0, 0, 0);
+
+          const dayIndex = last7Days.findIndex(d => d.getTime() === bookingDate.getTime());
+          if (dayIndex !== -1) {
+            counts[dayIndex]++;
+          }
+        });
+      }
+
+      setWeeklyBookings(counts);
+      setWeekDays(labels);
+    } catch (error) {
+      console.error('Error fetching weekly bookings:', error);
     }
   };
 
@@ -391,10 +451,12 @@ const Dashboard: React.FC = () => {
   }));
 
   const chartData: ChartData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    labels: weekDays,
     datasets: [
       {
-        data: [22, 28, 25, 32, 38, 42, 35],
+        data: weeklyBookings.length > 0 && weeklyBookings.some(v => v > 0)
+          ? weeklyBookings
+          : [0, 0, 0, 0, 0, 0, 0],
         color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
         strokeWidth: 3,
       },

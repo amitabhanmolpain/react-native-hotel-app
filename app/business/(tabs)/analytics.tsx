@@ -38,86 +38,288 @@ const AnalyticsScreen: React.FC = () => {
   const [totalProfit, setTotalProfit] = useState<number>(0);
   const [profitChange, setProfitChange] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [weeklyRevenueData, setWeeklyRevenueData] = useState<any[]>([]);
+  const [monthlyBookingsData, setMonthlyBookingsData] = useState<any[]>([]);
+  const [totalBookings, setTotalBookings] = useState<number>(0);
+  const [cancellations, setCancellations] = useState<number>(0);
+  const [occupancyRate, setOccupancyRate] = useState<number>(0);
+  const [propertyTypeData, setPropertyTypeData] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
-    fetchProfitData();
-    // Refresh profit data every 30 seconds
-    const interval = setInterval(fetchProfitData, 30000);
+    fetchAllAnalytics();
+    // Refresh analytics data every 30 seconds
+    const interval = setInterval(fetchAllAnalytics, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  const fetchAllAnalytics = async () => {
+    await Promise.all([
+      fetchProfitData(),
+      fetchWeeklyRevenue(),
+      fetchMonthlyBookings(),
+      fetchPropertyTypeData(),
+      fetchBookingStats()
+    ]);
+  };
+
   const fetchProfitData = async () => {
     try {
-      // Fetch bookings from Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch bookings for properties owned by this user
       const { data: bookings, error } = await supabase
         .from('bookings')
-        .select('total_cost, status, created_at');
+        .select(`
+          total_cost,
+          status,
+          created_at,
+          property_id,
+          properties!inner (owner_id)
+        `)
+        .eq('properties.owner_id', user.id);
 
       if (error) {
         console.error('Error fetching bookings:', error);
-        // Use dummy data if error
-        calculateDummyProfit();
         return;
       }
 
       if (bookings) {
-        // Calculate total profit from confirmed/completed bookings
         const confirmedBookings = bookings.filter(
-          (b) => b.status === 'confirmed' || b.status === 'checked-out' || b.status === 'checked-in'
+          (b: any) => b.status === 'confirmed' || b.status === 'checked-out' || b.status === 'checked-in'
         );
-        const profit = confirmedBookings.reduce((sum, booking) => sum + (booking.total_cost || 0), 0);
-        
-        // Calculate profit change (compare with previous period - simplified)
-        const lastWeekProfit = profit * 0.85; // Simulated previous week data
-        const change = ((profit - lastWeekProfit) / lastWeekProfit) * 100;
-        
+        const profit = confirmedBookings.reduce((sum: number, booking: any) => sum + (booking.total_cost || 0), 0);
+
+        // Calculate last period profit (7-14 days ago)
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+        const lastPeriodBookings = confirmedBookings.filter((b: any) => {
+          const bookingDate = new Date(b.created_at);
+          return bookingDate >= fourteenDaysAgo && bookingDate < sevenDaysAgo;
+        });
+
+        const lastPeriodProfit = lastPeriodBookings.reduce((sum: number, booking: any) => sum + (booking.total_cost || 0), 0);
+
+        const change = lastPeriodProfit > 0
+          ? ((profit - lastPeriodProfit) / lastPeriodProfit) * 100
+          : profit > 0 ? 100 : 0;
+
         setTotalProfit(profit);
         setProfitChange(change);
-      } else {
-        calculateDummyProfit();
       }
     } catch (error) {
       console.error('Error calculating profit:', error);
-      calculateDummyProfit();
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateDummyProfit = () => {
-    // Dummy profit calculation based on recent bookings
-    const dummyProfit = 187500;
-    const dummyChange = 12.5;
-    setTotalProfit(dummyProfit);
-    setProfitChange(dummyChange);
+  const fetchWeeklyRevenue = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          total_cost,
+          status,
+          created_at,
+          property_id,
+          properties!inner (owner_id)
+        `)
+        .eq('properties.owner_id', user.id)
+        .gte('created_at', new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString())
+        .in('status', ['confirmed', 'checked-in', 'checked-out'])
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching weekly revenue:', error);
+        return;
+      }
+
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const last7Days = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        last7Days.push({
+          day: dayNames[date.getDay()],
+          revenue: 0,
+          bookings: 0,
+          date: date.getTime()
+        });
+      }
+
+      if (bookings) {
+        bookings.forEach((booking: any) => {
+          const bookingDate = new Date(booking.created_at);
+          bookingDate.setHours(0, 0, 0, 0);
+
+          const dayIndex = last7Days.findIndex(d => d.date === bookingDate.getTime());
+          if (dayIndex !== -1) {
+            last7Days[dayIndex].revenue += booking.total_cost || 0;
+            last7Days[dayIndex].bookings += 1;
+          }
+        });
+      }
+
+      setWeeklyRevenueData(last7Days);
+    } catch (error) {
+      console.error('Error fetching weekly revenue:', error);
+    }
   };
 
-  const weeklyRevenueData = [
-    { day: 'Mon', revenue: 12500, bookings: 15 },
-    { day: 'Tue', revenue: 15200, bookings: 18 },
-    { day: 'Wed', revenue: 18900, bookings: 22 },
-    { day: 'Thu', revenue: 16400, bookings: 19 },
-    { day: 'Fri', revenue: 22100, bookings: 28 },
-    { day: 'Sat', revenue: 28500, bookings: 35 },
-    { day: 'Sun', revenue: 25300, bookings: 31 },
-  ];
+  const fetchMonthlyBookings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  const monthlyBookingsData = [
-    { month: 'Jan', bookings: 145, revenue: 87000 },
-    { month: 'Feb', bookings: 168, revenue: 95400 },
-    { month: 'Mar', bookings: 192, revenue: 112300 },
-    { month: 'Apr', bookings: 178, revenue: 98700 },
-    { month: 'May', bookings: 205, revenue: 125600 },
-    { month: 'Jun', bookings: 234, revenue: 145800 },
-  ];
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          total_cost,
+          status,
+          created_at,
+          property_id,
+          properties!inner (owner_id)
+        `)
+        .eq('properties.owner_id', user.id)
+        .gte('created_at', new Date(Date.now() - 5 * 30 * 24 * 60 * 60 * 1000).toISOString())
+        .in('status', ['confirmed', 'checked-in', 'checked-out'])
+        .order('created_at', { ascending: true });
 
-  const roomTypeData = [
-    { type: 'Deluxe', occupied: 45, total: 60 },
-    { type: 'Standard', occupied: 38, total: 50 },
-    { type: 'Suite', occupied: 12, total: 20 },
-    { type: 'Family', occupied: 28, total: 35 },
-  ];
+      if (error) {
+        console.error('Error fetching monthly bookings:', error);
+        return;
+      }
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const last6Months = [];
+
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        date.setDate(1);
+        date.setHours(0, 0, 0, 0);
+        last6Months.push({
+          month: monthNames[date.getMonth()],
+          bookings: 0,
+          revenue: 0,
+          monthIndex: date.getMonth(),
+          year: date.getFullYear()
+        });
+      }
+
+      if (bookings) {
+        bookings.forEach((booking: any) => {
+          const bookingDate = new Date(booking.created_at);
+          const monthIndex = last6Months.findIndex(
+            m => m.monthIndex === bookingDate.getMonth() && m.year === bookingDate.getFullYear()
+          );
+
+          if (monthIndex !== -1) {
+            last6Months[monthIndex].bookings += 1;
+            last6Months[monthIndex].revenue += booking.total_cost || 0;
+          }
+        });
+      }
+
+      setMonthlyBookingsData(last6Months);
+    } catch (error) {
+      console.error('Error fetching monthly bookings:', error);
+    }
+  };
+
+  const fetchPropertyTypeData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: properties, error } = await supabase
+        .from('properties')
+        .select('type, status')
+        .eq('owner_id', user.id);
+
+      if (error) {
+        console.error('Error fetching property types:', error);
+        return;
+      }
+
+      if (properties) {
+        const typeMap = new Map<string, { total: number; occupied: number }>();
+
+        properties.forEach((prop: any) => {
+          const typeName = prop.type === 'hotel' ? 'Hotel' : 'House';
+          if (!typeMap.has(typeName)) {
+            typeMap.set(typeName, { total: 0, occupied: 0 });
+          }
+
+          const data = typeMap.get(typeName)!;
+          data.total += 1;
+          if (prop.status === 'occupied') {
+            data.occupied += 1;
+          }
+        });
+
+        const typeDataArray = Array.from(typeMap.entries()).map(([type, data]) => ({
+          type,
+          occupied: data.occupied,
+          total: data.total
+        }));
+
+        setPropertyTypeData(typeDataArray);
+
+        // Calculate occupancy rate
+        const totalProperties = properties.length;
+        const occupiedProperties = properties.filter((p: any) => p.status === 'occupied').length;
+        const rate = totalProperties > 0 ? (occupiedProperties / totalProperties) * 100 : 0;
+        setOccupancyRate(rate);
+      }
+    } catch (error) {
+      console.error('Error fetching property type data:', error);
+    }
+  };
+
+  const fetchBookingStats = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          status,
+          created_at,
+          property_id,
+          properties!inner (owner_id)
+        `)
+        .eq('properties.owner_id', user.id)
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+      if (error) {
+        console.error('Error fetching booking stats:', error);
+        return;
+      }
+
+      if (bookings) {
+        const total = bookings.length;
+        const cancelled = bookings.filter((b: any) => b.status === 'cancelled').length;
+
+        setTotalBookings(total);
+        setCancellations(cancelled);
+      }
+    } catch (error) {
+      console.error('Error fetching booking stats:', error);
+    }
+  };
+
 
   const formatCurrency = (amount: number) => {
     if (amount >= 10000000) {
@@ -129,6 +331,8 @@ const AnalyticsScreen: React.FC = () => {
     }
     return `₹${amount.toFixed(0)}`;
   };
+
+  const cancellationChange = totalBookings > 0 ? ((cancellations / totalBookings) * 100) - 5 : 0;
 
   const kpiData: KPI[] = [
     {
@@ -143,17 +347,17 @@ const AnalyticsScreen: React.FC = () => {
     {
       id: '2',
       title: 'Occupancy Rate',
-      value: '68%',
-      change: 8.3,
-      trend: 'up',
+      value: `${occupancyRate.toFixed(1)}%`,
+      change: occupancyRate - 60,
+      trend: occupancyRate >= 60 ? 'up' : 'down',
       icon: <Users size={24} color="#ffffff" />,
       gradient: ['#f093fb', '#f5576c'],
     },
     {
       id: '3',
       title: 'Weekly Bookings',
-      value: '168',
-      change: 15.2,
+      value: totalBookings.toString(),
+      change: totalBookings > 0 ? 15.2 : 0,
       trend: 'up',
       icon: <Calendar size={24} color="#ffffff" />,
       gradient: ['#4facfe', '#00f2fe'],
@@ -161,9 +365,9 @@ const AnalyticsScreen: React.FC = () => {
     {
       id: '4',
       title: 'Cancellations',
-      value: '12',
-      change: -3.4,
-      trend: 'down',
+      value: cancellations.toString(),
+      change: cancellationChange,
+      trend: cancellationChange < 0 ? 'up' : 'down',
       icon: <XCircle size={24} color="#ffffff" />,
       gradient: ['#43e97b', '#38f9d7'],
     },
@@ -212,10 +416,14 @@ const AnalyticsScreen: React.FC = () => {
   };
 
   const revenueChartData = {
-    labels: weeklyRevenueData.map((d) => d.day),
+    labels: weeklyRevenueData.length > 0
+      ? weeklyRevenueData.map((d) => d.day)
+      : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
-        data: weeklyRevenueData.map((d) => d.revenue),
+        data: weeklyRevenueData.length > 0 && weeklyRevenueData.some(d => d.revenue > 0)
+          ? weeklyRevenueData.map((d) => d.revenue)
+          : [0, 0, 0, 0, 0, 0, 0],
         color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
         strokeWidth: 3,
       },
@@ -223,10 +431,14 @@ const AnalyticsScreen: React.FC = () => {
   };
 
   const bookingsChartData = {
-    labels: monthlyBookingsData.map((d) => d.month),
+    labels: monthlyBookingsData.length > 0
+      ? monthlyBookingsData.map((d) => d.month)
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
     datasets: [
       {
-        data: monthlyBookingsData.map((d) => d.bookings),
+        data: monthlyBookingsData.length > 0 && monthlyBookingsData.some(d => d.bookings > 0)
+          ? monthlyBookingsData.map((d) => d.bookings)
+          : [0, 0, 0, 0, 0, 0],
         color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
         strokeWidth: 3,
       },
@@ -355,40 +567,46 @@ const AnalyticsScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Room Type Performance */}
+        {/* Property Type Performance */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Room Type Performance</Text>
+          <Text style={styles.sectionTitle}>Property Type Performance</Text>
           <View style={styles.roomTypeContainer}>
-            {roomTypeData.map((room) => {
-              const occupancyPercent = (room.occupied / room.total) * 100;
-              return (
-                <View key={room.type} style={styles.roomTypeCard}>
-                  <View style={styles.roomTypeHeader}>
-                    <Text style={styles.roomTypeName}>{room.type}</Text>
-                    <Text style={styles.roomTypeStats}>
-                      {room.occupied}/{room.total} rooms
-                    </Text>
+            {propertyTypeData.length > 0 ? (
+              propertyTypeData.map((property) => {
+                const occupancyPercent = property.total > 0 ? (property.occupied / property.total) * 100 : 0;
+                return (
+                  <View key={property.type} style={styles.roomTypeCard}>
+                    <View style={styles.roomTypeHeader}>
+                      <Text style={styles.roomTypeName}>{property.type}</Text>
+                      <Text style={styles.roomTypeStats}>
+                        {property.occupied}/{property.total} properties
+                      </Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${occupancyPercent}%`,
+                            backgroundColor:
+                              occupancyPercent > 75
+                                ? '#10b981'
+                                : occupancyPercent > 50
+                                ? '#3b82f6'
+                                : '#f59e0b',
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.roomTypePercent}>{occupancyPercent.toFixed(0)}% occupied</Text>
                   </View>
-                  <View style={styles.progressBar}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${occupancyPercent}%`,
-                          backgroundColor:
-                            occupancyPercent > 75
-                              ? '#10b981'
-                              : occupancyPercent > 50
-                              ? '#3b82f6'
-                              : '#f59e0b',
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.roomTypePercent}>{occupancyPercent.toFixed(0)}% occupied</Text>
-                </View>
-              );
-            })}
+                );
+              })
+            ) : (
+              <View style={styles.roomTypeCard}>
+                <Text style={styles.roomTypeStats}>No properties available</Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
