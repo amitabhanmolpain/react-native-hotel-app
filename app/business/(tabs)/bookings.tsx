@@ -63,7 +63,7 @@ const BookingsScreen: React.FC = () => {
           property_id,
           user_id,
           properties!inner (name, owner_id),
-          users!inner (name)
+          users!bookings_user_id_fkey (name)
         `)
         .eq('properties.owner_id', user.id)
         .order('created_at', { ascending: false });
