@@ -1,119 +1,49 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Platform, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Search, MapPin, Star, Heart, SlidersHorizontal, User as UserIcon, Calendar, Users, Bed, Wifi, Coffee, Dumbbell } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../supabaseClient';
-
-// Mock special offers/deals
-const specialOffers = [
-  {
-    id: '1',
-    title: 'Weekend Getaway Special',
-    discount: '30% OFF',
-    property: 'Luxury Beach Resort',
-    validUntil: '2025-11-15',
-    image: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800',
-    color: '#ec4899',
-  },
-  {
-    id: '2',
-    title: 'Early Bird Booking',
-    discount: '25% OFF',
-    property: 'Mountain View Villa',
-    validUntil: '2025-11-20',
-    image: 'https://images.pexels.com/photos/1732414/pexels-photo-1732414.jpeg?auto=compress&cs=tinysrgb&w=800',
-    color: '#8b5cf6',
-  },
-  {
-    id: '3',
-    title: 'Extended Stay Discount',
-    discount: '40% OFF',
-    property: 'Downtown Boutique Hotel',
-    validUntil: '2025-11-30',
-    image: 'https://images.pexels.com/photos/271624/pexels-photo-271624.jpeg?auto=compress&cs=tinysrgb&w=800',
-    color: '#10b981',
-  },
-];
-
-// Mock upcoming events
-const upcomingEvents = [
-  {
-    id: '1',
-    title: 'Corporate Annual Gala 2025',
-    venue: 'Grand Ballroom - Luxury Beach Resort',
-    date: '2025-11-10',
-    time: '7:00 PM',
-    category: 'Corporate',
-    ticketPrice: 150,
-    image: 'https://images.pexels.com/photos/1387037/pexels-photo-1387037.jpeg?auto=compress&cs=tinysrgb&w=800',
-    attendees: 250,
-  },
-  {
-    id: '2',
-    title: 'Wedding Celebration',
-    venue: 'Garden Pavilion - Mountain View Villa',
-    date: '2025-11-15',
-    time: '5:00 PM',
-    category: 'Wedding',
-    ticketPrice: 200,
-    image: 'https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg?auto=compress&cs=tinysrgb&w=800',
-    attendees: 150,
-  },
-  {
-    id: '3',
-    title: 'Tech Conference 2025',
-    venue: 'Convention Center - Downtown Boutique Hotel',
-    date: '2025-11-18',
-    time: '9:00 AM',
-    category: 'Conference',
-    ticketPrice: 99,
-    image: 'https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=800',
-    attendees: 500,
-  },
-  {
-    id: '4',
-    title: 'Charity Fundraiser Dinner',
-    venue: 'Rooftop Terrace - Luxury Beach Resort',
-    date: '2025-11-22',
-    time: '6:30 PM',
-    category: 'Charity',
-    ticketPrice: 120,
-    image: 'https://images.pexels.com/photos/2306203/pexels-photo-2306203.jpeg?auto=compress&cs=tinysrgb&w=800',
-    attendees: 180,
-  },
-];
-
-interface Property {
-  id: string;
-  name: string;
-  type: 'hotel' | 'house';
-  city: string;
-  state: string;
-  location: string;
-  price: number;
-  rating: number;
-  reviews: number;
-  bedrooms: number;
-  bathrooms: number;
-  description: string;
-  images: string[];
-  amenities: string;
-  status: string;
-  featured: boolean;
-}
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import Svg, { Circle } from "react-native-svg";
+import {
+  Search,
+  MapPin,
+  Star,
+  Heart,
+  SlidersHorizontal,
+  User as UserIcon,
+  Calendar,
+  Users,
+  Bed,
+  Wifi,
+  Coffee,
+  Dumbbell,
+} from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../supabaseClient";
 
 export default function EnhancedUserHomeScreen() {
   const router = useRouter();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [properties, setProperties] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [checkInDate, setCheckInDate] = useState<string>('');
-  const [checkOutDate, setCheckOutDate] = useState<string>('');
-  const [guests, setGuests] = useState<string>('2 Adults, 1 Room');
-  const [userName, setUserName] = useState('Guest');
+  const [checkInDate, setCheckInDate] = useState<string>("");
+  const [checkOutDate, setCheckOutDate] = useState<string>("");
+  const [guests, setGuests] = useState<string>("2 Adults, 1 Room");
+  const [userName, setUserName] = useState("Guest");
   const [loading, setLoading] = useState(true);
 
+  /* =============== FETCH USERNAME + DATA =============== */
   useEffect(() => {
     loadUserName();
     initializeDates();
@@ -123,118 +53,176 @@ export default function EnhancedUserHomeScreen() {
   const loadUserName = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-
       if (user) {
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', user.id)
+        const { data: userData } = await supabase
+          .from("users")
+          .select("name")
+          .eq("id", user.id)
           .maybeSingle();
 
-        if (userData && userData.name) {
-          setUserName(userData.name);
-        } else {
-          const storedName = await AsyncStorage.getItem('userName');
-          if (storedName) {
-            setUserName(storedName);
-          }
+        if (userData?.name) setUserName(userData.name);
+        else {
+          const storedName = await AsyncStorage.getItem("userName");
+          if (storedName) setUserName(storedName);
         }
       }
-    } catch (error) {
-      console.error('Error loading user name:', error);
-    }
+    } catch (e) {}
   };
 
   const initializeDates = () => {
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dayAfter = new Date(tomorrow);
-    dayAfter.setDate(dayAfter.getDate() + 2);
+    const tmr = new Date(today);
+    tmr.setDate(tmr.getDate() + 1);
+    const after = new Date(tmr);
+    after.setDate(after.getDate() + 2);
 
-    setCheckInDate(tomorrow.toISOString().split('T')[0]);
-    setCheckOutDate(dayAfter.toISOString().split('T')[0]);
+    setCheckInDate(tmr.toISOString().split("T")[0]);
+    setCheckOutDate(after.toISOString().split("T")[0]);
   };
 
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('status', 'available')
-        .order('created_at', { ascending: false });
+      const { data } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("status", "available")
+        .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error('Error fetching properties:', error);
-      } else if (data) {
-        const formattedProperties = data.map((prop: any) => ({
-          id: prop.id,
-          name: prop.name,
-          type: prop.type,
-          city: prop.city,
-          state: prop.state,
-          location: prop.location,
-          price: prop.price,
-          rating: prop.rating || 0,
-          reviews: prop.reviews || 0,
-          bedrooms: prop.bedrooms || 0,
-          bathrooms: prop.bathrooms || 0,
-          description: prop.description || '',
-          images: Array.isArray(prop.images) ? prop.images : [],
-          amenities: prop.amenities || '',
-          status: prop.status,
-          featured: prop.featured || false,
+      if (data) {
+        const formatted = data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          city: p.city,
+          state: p.state,
+          location: p.location,
+          price: p.price,
+          rating: p.rating || 0,
+          reviews: p.reviews || 0,
+          bedrooms: p.bedrooms || 0,
+          bathrooms: p.bathrooms || 0,
+          description: p.description || "",
+          images: Array.isArray(p.images) ? p.images : [],
+          amenities: p.amenities || "",
+          status: p.status,
+          featured: p.featured || false,
         }));
-        setProperties(formattedProperties);
+        setProperties(formatted);
       }
-    } catch (error) {
-      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredProperties = properties.filter((property) =>
-    property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    property.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    property.type.toLowerCase().includes(searchQuery.toLowerCase())
+  /* =============== FILTER DATA =============== */
+  const filteredProperties = properties.filter(
+    (p: any) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const featuredProperties = filteredProperties.filter(p => p.featured);
+  const featuredProperties = filteredProperties.filter((p: any) => p.featured);
+
   const allProperties = filteredProperties;
 
+  /* =============== FAVORITE TOGGLE =============== */
   const toggleFavorite = (id: string) => {
-    setFavorites(prev =>
-      prev.includes(id) ? prev.filter(fav => fav !== id) : [...prev, id]
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = {
-      month: 'short',
-      day: 'numeric',
-    };
-    return date.toLocaleDateString('en-US', options);
+  const formatDate = (ds: string) => {
+    const date = new Date(ds);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
+
+  // Fallback/sample data for UI when backend returns no offers/events
+  const specialOffers: Array<any> = [
+    {
+      id: "offer-1",
+      title: "Weekend Escape – 30% Off",
+      property: "Seaside Resort",
+      image:
+        "https://images.unsplash.com/photo-1501117716987-c8e6bfb9f1d1?q=80&w=1080&auto=format&fit=crop",
+      discount: "30% OFF",
+      validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      color: "#ef4444",
+    },
+    {
+      id: "offer-2",
+      title: "Midweek Saver – 20% Off",
+      property: "City Center Hotel",
+      image:
+        "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?q=80&w=1080&auto=format&fit=crop",
+      discount: "20% OFF",
+      validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      color: "#f59e0b",
+    },
+  ];
+
+  const upcomingEvents: Array<any> = [
+    {
+      id: "event-1",
+      title: "Live Jazz Night",
+      venue: "Seaside Resort",
+      image:
+        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1080&auto=format&fit=crop",
+      date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      attendees: 42,
+      ticketPrice: 499,
+      category: "Music",
+    },
+    {
+      id: "event-2",
+      title: "Weekend Yoga Retreat",
+      venue: "City Center Hotel",
+      image:
+        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1080&auto=format&fit=crop",
+      date: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString(),
+      attendees: 18,
+      ticketPrice: 799,
+      category: "Wellness",
+    },
+  ];
+
+  /* ======================================================
+     =====================  UI START  =====================
+     ====================================================== */
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* --------- Neon Background + Glow --------- */}
+      <LinearGradient
+        colors={["#0b1020", "#0c1122", "#0b0f1a"]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <Svg width="100%" height="100%" style={styles.bgGlow}>
+        <Circle cx="14%" cy="8%" r="220" fill="#7c3aed" opacity="0.12" />
+        <Circle cx="82%" cy="88%" r="260" fill="#6b21a8" opacity="0.10" />
+        <Circle cx="50%" cy="50%" r="420" fill="#8b5cf6" opacity="0.05" />
+      </Svg>
+
+      {/* =============== HEADER =============== */}
+      <BlurView intensity={40} tint="dark" style={styles.header}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Welcome back</Text>
             <Text style={styles.username}>{userName}</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton} activeOpacity={0.7}>
-            <UserIcon color="#475569" size={24} />
+
+          <TouchableOpacity style={styles.profileButton}>
+            <UserIcon size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
+        {/* SEARCH BAR */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Search color="#64748b" size={20} />
+          <BlurView intensity={30} tint="dark" style={styles.searchBar}>
+            <Search color="#cbd5e1" size={20} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search hotels, destinations..."
@@ -242,81 +230,102 @@ export default function EnhancedUserHomeScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-          </View>
-          <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-            <SlidersHorizontal color="#475569" size={24} />
+          </BlurView>
+
+          <TouchableOpacity style={styles.filterButton} activeOpacity={0.8}>
+            <SlidersHorizontal color="#fff" size={22} />
           </TouchableOpacity>
         </View>
-      </View>
-
+      </BlurView>
+      {/* ======================================================
+          QUICK BOOKING CARD — Neon / Glass Theme
+      ====================================================== */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-
-        {/* Quick Booking Card */}
-        <View style={styles.quickBookingCard}>
+        showsVerticalScrollIndicator={false}
+      >
+        <BlurView intensity={45} tint="dark" style={styles.quickBookingCard}>
           <View style={styles.quickBookingHeader}>
             <View style={styles.quickBookingTitleRow}>
-              <Bed color="#2563eb" size={24} />
+              <Bed color="#60a5fa" size={26} />
               <Text style={styles.quickBookingTitle}>Book Your Stay</Text>
             </View>
-            <Text style={styles.quickBookingSubtitle}>Find your perfect room</Text>
+            <Text style={styles.quickBookingSubtitle}>
+              Find your perfect room
+            </Text>
           </View>
 
+          {/* DATE + GUEST INPUTS */}
           <View style={styles.quickBookingInputs}>
             <View style={styles.dateInputRow}>
-              <TouchableOpacity 
+              {/* CHECK-IN */}
+              <TouchableOpacity
                 style={styles.dateInput}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
                 onPress={() => {
-                  // Open date picker for check-in
                   const today = new Date();
                   const tomorrow = new Date(today);
                   tomorrow.setDate(tomorrow.getDate() + 1);
-                  setCheckInDate(tomorrow.toISOString().split('T')[0]);
-                }}>
-                <Calendar size={18} color="#64748b" />
+                  setCheckInDate(tomorrow.toISOString().split("T")[0]);
+                }}
+              >
+                <Calendar size={18} color="#cbd5e1" />
                 <View style={styles.dateInputText}>
                   <Text style={styles.dateLabel}>Check-in</Text>
                   <Text style={styles.dateValue}>
-                    {checkInDate ? new Date(checkInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
+                    {checkInDate
+                      ? new Date(checkInDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Select date"}
                   </Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity 
+
+              {/* CHECK-OUT */}
+              <TouchableOpacity
                 style={styles.dateInput}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
                 onPress={() => {
-                  // Open date picker for check-out
                   const checkIn = new Date(checkInDate);
-                  const nextDay = new Date(checkIn);
-                  nextDay.setDate(nextDay.getDate() + 1);
-                  setCheckOutDate(nextDay.toISOString().split('T')[0]);
-                }}>
-                <Calendar size={18} color="#64748b" />
+                  const next = new Date(checkIn);
+                  next.setDate(next.getDate() + 1);
+                  setCheckOutDate(next.toISOString().split("T")[0]);
+                }}
+              >
+                <Calendar size={18} color="#cbd5e1" />
                 <View style={styles.dateInputText}>
                   <Text style={styles.dateLabel}>Check-out</Text>
                   <Text style={styles.dateValue}>
-                    {checkOutDate ? new Date(checkOutDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'}
+                    {checkOutDate
+                      ? new Date(checkOutDate).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "Select date"}
                   </Text>
                 </View>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
+            {/* GUESTS INPUT */}
+            <TouchableOpacity
               style={styles.guestsInput}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
               onPress={() => {
-                // Could open a modal for guest selection
-                Alert.alert('Guests', 'Select number of guests and rooms', [
-                  { text: '1 Adult, 1 Room', onPress: () => setGuests('1 Adult, 1 Room') },
-                  { text: '2 Adults, 1 Room', onPress: () => setGuests('2 Adults, 1 Room') },
-                  { text: '2 Adults, 2 Rooms', onPress: () => setGuests('2 Adults, 2 Rooms') },
-                  { text: 'Cancel', style: 'cancel' },
+                Alert.alert("Guests", "Select number of guests", [
+                  { text: "1 Adult, 1 Room", onPress: () => setGuests("1 Adult, 1 Room") },
+                  { text: "2 Adults, 1 Room", onPress: () => setGuests("2 Adults, 1 Room") },
+                  { text: "2 Adults, 2 Rooms", onPress: () => setGuests("2 Adults, 2 Rooms") },
+                  { text: "Cancel", style: "cancel" },
                 ]);
-              }}>
-              <Users size={18} color="#64748b" />
+              }}
+            >
+              <Users size={18} color="#cbd5e1" />
               <View style={styles.dateInputText}>
                 <Text style={styles.dateLabel}>Guests</Text>
                 <Text style={styles.dateValue}>{guests}</Text>
@@ -324,12 +333,13 @@ export default function EnhancedUserHomeScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* SEARCH BUTTON */}
           <TouchableOpacity
             style={styles.searchRoomsButton}
-            activeOpacity={0.8}
+            activeOpacity={0.9}
             onPress={() => {
               if (!checkInDate || !checkOutDate) {
-                Alert.alert('Missing Dates', 'Please select check-in and check-out dates');
+                Alert.alert("Missing Dates", "Please select check-in and check-out dates");
                 return;
               }
 
@@ -337,30 +347,35 @@ export default function EnhancedUserHomeScreen() {
               const checkOut = new Date(checkOutDate);
 
               if (checkOut <= checkIn) {
-                Alert.alert('Invalid Dates', 'Check-out date must be after check-in date');
+                Alert.alert("Invalid Dates", "Check-out must be after check-in");
                 return;
               }
 
-              const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+              const nights = Math.ceil(
+                (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
+              );
 
               Alert.alert(
-                'Search Results',
-                `Searching for rooms:\n\nCheck-in: ${checkIn.toLocaleDateString()}\nCheck-out: ${checkOut.toLocaleDateString()}\nNights: ${nights}\nGuests: ${guests}\n\nShowing all available properties below.`,
-                [{ text: 'OK' }]
+                "Search Results",
+                `Searching rooms:\n\nCheck-in: ${checkIn.toLocaleDateString()}\nCheck-out: ${checkOut.toLocaleDateString()}\nNights: ${nights}\nGuests: ${guests}\n\nShowing all available properties.`,
+                [{ text: "OK" }]
               );
-            }}>
+            }}
+          >
             <Search size={20} color="#fff" />
             <Text style={styles.searchRoomsButtonText}>Search Rooms</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Special Offers */}
+        </BlurView>
+        {/* ======================================================
+            SPECIAL OFFERS — Neon Cards + Dark Overlay
+        ====================================================== */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <View>
               <Text style={styles.sectionTitle}>Special Offers</Text>
               <Text style={styles.sectionSubtitle}>Limited time deals</Text>
             </View>
+
             <TouchableOpacity activeOpacity={0.7}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
@@ -369,84 +384,107 @@ export default function EnhancedUserHomeScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.offersScroll}>
+            contentContainerStyle={styles.offersScroll}
+          >
             {specialOffers.map((offer) => (
               <TouchableOpacity
                 key={offer.id}
                 style={styles.offerCard}
-                activeOpacity={0.9}>
+                activeOpacity={0.9}
+              >
                 <Image source={{ uri: offer.image }} style={styles.offerImage} />
-                <View style={styles.offerOverlay}>
+
+                {/* DARK GRADIENT OVERLAY */}
+                <LinearGradient
+                  colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.7)", "rgba(0,0,0,0.85)"]}
+                  style={styles.offerOverlay}
+                >
+                  {/* DISCOUNT BADGE */}
                   <View style={[styles.discountBadge, { backgroundColor: offer.color }]}>
                     <Text style={styles.discountText}>{offer.discount}</Text>
                   </View>
-                  
-                  <View style={styles.offerContent}>
-                    <Text style={styles.offerTitle} numberOfLines={2}>{offer.title}</Text>
-                    
+
+                  {/* CARD CONTENT */}
+                  <BlurView intensity={30} tint="dark" style={styles.offerContent}>
+                    <Text style={styles.offerTitle} numberOfLines={2}>
+                      {offer.title}
+                    </Text>
+
                     <View style={styles.offerLocation}>
-                      <MapPin size={14} color="#64748b" />
+                      <MapPin size={14} color="#a5b4fc" />
                       <Text style={styles.offerLocationText} numberOfLines={1}>
                         {offer.property}
                       </Text>
                     </View>
 
+                    {/* VALID UNTIL */}
                     <View style={styles.offerFooter}>
                       <View style={styles.validUntilContainer}>
-                        <Calendar size={12} color="#64748b" />
+                        <Calendar size={12} color="#cbd5e1" />
                         <Text style={styles.validUntilText}>
                           Valid until {formatDate(offer.validUntil)}
                         </Text>
                       </View>
                     </View>
 
-                    <TouchableOpacity 
-                      style={styles.bookNowButton} 
-                      activeOpacity={0.8}
+                    {/* BOOK NOW BUTTON */}
+                    <TouchableOpacity
+                      style={styles.bookNowButton}
+                      activeOpacity={0.85}
                       onPress={() => {
-                        // Find property by name or use first available property
-                        const matchingProperty = properties.find(p => 
+                        const match = properties.find((p) =>
                           p.name.toLowerCase().includes(offer.property.toLowerCase())
                         );
-                        if (matchingProperty) {
-                          router.push(`/(user)/property/${matchingProperty.id}`);
-                        } else if (properties.length > 0) {
+                        if (match) router.push(`/(user)/property/${match.id}`);
+                        else if (properties.length > 0)
                           router.push(`/(user)/property/${properties[0].id}`);
-                        }
-                      }}>
+                      }}
+                    >
                       <Text style={styles.bookNowButtonText}>Book Now</Text>
                     </TouchableOpacity>
-                  </View>
-                </View>
+                  </BlurView>
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
-        {/* Popular Amenities Quick Filter */}
+        {/* ======================================================
+            POPULAR AMENITIES — Neon Chips
+        ====================================================== */}
         <View style={styles.amenitiesSection}>
           <Text style={styles.amenitiesTitle}>Popular Amenities</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.amenitiesScroll}>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.amenitiesScroll}
+          >
             <TouchableOpacity style={styles.amenityChip} activeOpacity={0.7}>
-              <Wifi size={18} color="#2563eb" />
+              <Wifi size={18} color="#60a5fa" />
               <Text style={styles.amenityChipText}>Free WiFi</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.amenityChip} activeOpacity={0.7}>
-              <Coffee size={18} color="#2563eb" />
+              <Coffee size={18} color="#60a5fa" />
               <Text style={styles.amenityChipText}>Breakfast</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.amenityChip} activeOpacity={0.7}>
-              <Dumbbell size={18} color="#2563eb" />
+              <Dumbbell size={18} color="#60a5fa" />
               <Text style={styles.amenityChipText}>Gym</Text>
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.amenityChip} activeOpacity={0.7}>
-              <Bed size={18} color="#2563eb" />
+              <Bed size={18} color="#60a5fa" />
               <Text style={styles.amenityChipText}>Pool</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
-
-        {searchQuery === '' && featuredProperties.length > 0 && (
+        {/* ======================================================
+            FEATURED HOTELS — Neon Gradient Cards
+        ====================================================== */}
+        {searchQuery === "" && featuredProperties.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <View>
@@ -454,56 +492,115 @@ export default function EnhancedUserHomeScreen() {
                 <Text style={styles.sectionSubtitle}>Handpicked for you</Text>
               </View>
             </View>
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}>
+              contentContainerStyle={styles.horizontalScroll}
+            >
               {featuredProperties.map((property) => (
                 <TouchableOpacity
                   key={property.id}
                   style={styles.featuredCard}
-                  onPress={() => router.push(`/(user)/property/${property.id}`)}
-                  activeOpacity={0.9}>
-                  <Image source={{ uri: property.images[0] }} style={styles.featuredImage} />
+                  activeOpacity={0.9}
+                  onPress={() =>
+                    router.push(`/(user)/property/${property.id}`)
+                  }
+                >
+                  {/* IMAGE */}
+                  <Image
+                    source={{
+                      uri:
+                        property.images && property.images.length > 0
+                          ? property.images[0]
+                          : 'https://via.placeholder.com/400x300?text=No+Image',
+                    }}
+                    style={styles.featuredImage}
+                  />
+
+                  {/* FAVORITE HEART */}
                   <TouchableOpacity
                     style={styles.favoriteButton}
+                    activeOpacity={0.8}
                     onPress={() => toggleFavorite(property.id)}
-                    activeOpacity={0.8}>
+                  >
                     <Heart
-                      color={favorites.includes(property.id) ? '#ef4444' : '#fff'}
                       size={20}
-                      fill={favorites.includes(property.id) ? '#ef4444' : 'none'}
+                      color={
+                        favorites.includes(property.id)
+                          ? "#f87171"
+                          : "#ffffff"
+                      }
+                      fill={
+                        favorites.includes(property.id)
+                          ? "#f87171"
+                          : "transparent"
+                      }
                     />
                   </TouchableOpacity>
-                  <View style={styles.featuredContent}>
-                    <Text style={styles.featuredName} numberOfLines={1}>{property.name}</Text>
-                    <View style={styles.featuredLocation}>
-                      <MapPin color="#fff" size={14} />
-                      <Text style={styles.featuredLocationText}>{property.city}, {property.state}</Text>
+
+                  {/* GRADIENT OVERLAY */}
+                  <LinearGradient
+                    colors={[
+                      "rgba(0,0,0,0)",
+                      "rgba(0,0,0,0.8)",
+                      "rgba(0,0,0,0.9)",
+                    ]}
+                    style={styles.featuredOverlay}
+                  >
+                    <View style={styles.featuredContent}>
+                      <Text
+                        style={styles.featuredName}
+                        numberOfLines={1}
+                      >
+                        {property.name}
+                      </Text>
+
+                      <View style={styles.featuredLocation}>
+                        <MapPin size={14} color="#e2e8f0" />
+                        <Text style={styles.featuredLocationText}>
+                          {property.city}, {property.state}
+                        </Text>
+                      </View>
+
+                      <View style={styles.featuredFooter}>
+                        {property.rating > 0 && (
+                          <View style={styles.ratingBadge}>
+                            <Star
+                              size={12}
+                              color="#fbbf24"
+                              fill="#fbbf24"
+                            />
+                            <Text style={styles.ratingText}>
+                              {property.rating}
+                            </Text>
+                          </View>
+                        )}
+
+                        <Text style={styles.featuredPrice}>
+                          ₹{property.price}/night
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.featuredFooter}>
-                      {property.rating > 0 && (
-                        <View style={styles.ratingBadge}>
-                          <Star color="#fbbf24" size={12} fill="#fbbf24" />
-                          <Text style={styles.ratingText}>{property.rating}</Text>
-                        </View>
-                      )}
-                      <Text style={styles.featuredPrice}>₹{property.price}/night</Text>
-                    </View>
-                  </View>
+                  </LinearGradient>
                 </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
         )}
 
-        {/* Upcoming Events Section */}
+        {/* ======================================================
+            UPCOMING EVENTS — Neon Cards + Blue Highlights
+        ====================================================== */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <View>
               <Text style={styles.sectionTitle}>Upcoming Events</Text>
-              <Text style={styles.sectionSubtitle}>Book tickets for exclusive events</Text>
+              <Text style={styles.sectionSubtitle}>
+                Book tickets for exclusive events
+              </Text>
             </View>
+
             <TouchableOpacity activeOpacity={0.7}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
@@ -512,148 +609,253 @@ export default function EnhancedUserHomeScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}>
+            contentContainerStyle={styles.horizontalScroll}
+          >
             {upcomingEvents.map((event) => (
               <TouchableOpacity
                 key={event.id}
                 style={styles.eventCard}
-                activeOpacity={0.9}>
-                <Image source={{ uri: event.image }} style={styles.eventImage} />
+                activeOpacity={0.9}
+              >
+                {/* EVENT IMAGE */}
+                <Image
+                  source={{ uri: event.image }}
+                  style={styles.eventImage}
+                />
+
+                {/* CATEGORY TAG */}
                 <View style={styles.eventCategoryBadge}>
-                  <Text style={styles.eventCategoryText}>{event.category}</Text>
+                  <Text style={styles.eventCategoryText}>
+                    {event.category}
+                  </Text>
                 </View>
-                <View style={styles.eventContent}>
-                  <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
-                  
+
+                {/* EVENT CARD CONTENT */}
+                <BlurView
+                  intensity={35}
+                  tint="dark"
+                  style={styles.eventContent}
+                >
+                  <Text
+                    style={styles.eventTitle}
+                    numberOfLines={2}
+                  >
+                    {event.title}
+                  </Text>
+
+                  {/* LOCATION */}
                   <View style={styles.eventLocation}>
-                    <MapPin size={14} color="#64748b" />
-                    <Text style={styles.eventLocationText} numberOfLines={1}>
+                    <MapPin size={14} color="#94a3b8" />
+                    <Text
+                      style={styles.eventLocationText}
+                      numberOfLines={1}
+                    >
                       {event.venue}
                     </Text>
                   </View>
 
+                  {/* DATE + ATTENDEES */}
                   <View style={styles.eventDetails}>
                     <View style={styles.eventDetailItem}>
-                      <Calendar size={14} color="#64748b" />
-                      <Text style={styles.eventDetailText}>{formatDate(event.date)}</Text>
+                      <Calendar size={14} color="#cbd5e1" />
+                      <Text style={styles.eventDetailText}>
+                        {formatDate(event.date)}
+                      </Text>
                     </View>
+
                     <View style={styles.eventDetailItem}>
-                      <Users size={14} color="#64748b" />
-                      <Text style={styles.eventDetailText}>{event.attendees} attending</Text>
+                      <Users size={14} color="#cbd5e1" />
+                      <Text style={styles.eventDetailText}>
+                        {event.attendees} attending
+                      </Text>
                     </View>
                   </View>
 
+                  {/* FOOTER */}
                   <View style={styles.eventFooter}>
                     <View>
                       <Text style={styles.eventPriceLabel}>From</Text>
-                      <Text style={styles.eventPrice}>₹{event.ticketPrice}</Text>
+                      <Text style={styles.eventPrice}>
+                        ₹{event.ticketPrice}
+                      </Text>
                     </View>
-                    <TouchableOpacity 
-                      style={styles.bookTicketButton} 
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        router.push('/(user)/CreateEventScreen');
-                      }}>
-                      <Text style={styles.bookTicketButtonText}>Book Ticket</Text>
+
+                    <TouchableOpacity
+                      style={styles.bookTicketButton}
+                      activeOpacity={0.85}
+                      onPress={() =>
+                        router.push("/(user)/CreateEventScreen")
+                      }
+                    >
+                      <Text style={styles.bookTicketButtonText}>
+                        Book Ticket
+                      </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
+                </BlurView>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
-
+        {/* ======================================================
+            ALL PROPERTIES — Neon Glass List
+        ====================================================== */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <View>
               <Text style={styles.sectionTitle}>
-                {searchQuery ? `Results for "${searchQuery}"` : 'All Properties'}
+                {searchQuery
+                  ? `Results for "${searchQuery}"`
+                  : "All Properties"}
               </Text>
-              <Text style={styles.sectionSubtitle}>{allProperties.length} properties available</Text>
+              <Text style={styles.sectionSubtitle}>
+                {allProperties.length} properties available
+              </Text>
             </View>
           </View>
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2563eb" />
+              <ActivityIndicator size="large" color="#60a5fa" />
               <Text style={styles.loadingText}>Loading properties...</Text>
             </View>
           ) : allProperties.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No properties found</Text>
-              <Text style={styles.emptySubtext}>Try adjusting your search criteria</Text>
+              <Text style={styles.emptySubtext}>
+                Try adjusting your search
+              </Text>
             </View>
           ) : (
             allProperties.map((property) => (
-            <TouchableOpacity
-              key={property.id}
-              style={styles.propertyCard}
-              onPress={() => router.push(`/(user)/property/${property.id}`)}
-              activeOpacity={0.9}>
-              <Image source={{ uri: property.images[0] }} style={styles.propertyImage} />
-              <View style={styles.propertyContent}>
-                <View style={styles.propertyHeader}>
-                  <View style={styles.propertyInfo}>
-                    <Text style={styles.propertyName} numberOfLines={1}>{property.name}</Text>
-                    <View style={styles.propertyLocation}>
-                      <MapPin color="#64748b" size={14} />
-                      <Text style={styles.propertyLocationText}>{property.city}, {property.state}</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => toggleFavorite(property.id)}
-                    activeOpacity={0.8}>
-                    <Heart
-                      color={favorites.includes(property.id) ? '#ef4444' : '#cbd5e1'}
-                      size={22}
-                      fill={favorites.includes(property.id) ? '#ef4444' : 'none'}
-                    />
-                  </TouchableOpacity>
-                </View>
+              <TouchableOpacity
+                key={property.id}
+                style={styles.propertyCard}
+                activeOpacity={0.9}
+                onPress={() =>
+                  router.push(`/(user)/property/${property.id}`)
+                }
+              >
+                <Image
+                  source={{
+                    uri:
+                      property.images && property.images.length > 0
+                        ? property.images[0]
+                        : 'https://via.placeholder.com/400x300?text=No+Image',
+                  }}
+                  style={styles.propertyImage}
+                />
 
-                <View style={styles.propertyDetails}>
-                  <View style={styles.propertyTag}>
-                    <Text style={styles.propertyTagText}>{property.type === 'hotel' ? 'Hotel' : 'House'}</Text>
-                  </View>
-                  <Text style={styles.propertyDetailText}>
-                    {property.bedrooms} bed • {property.bathrooms} bath
-                  </Text>
-                </View>
+                <BlurView intensity={35} tint="dark" style={styles.propertyContent}>
+                  {/* HEADER */}
+                  <View style={styles.propertyHeader}>
+                    <View style={styles.propertyInfo}>
+                      <Text
+                        style={styles.propertyName}
+                        numberOfLines={1}
+                      >
+                        {property.name}
+                      </Text>
 
-                <View style={styles.propertyFooter}>
-                  {property.rating > 0 ? (
-                    <View style={styles.ratingContainer}>
-                      <Star color="#fbbf24" size={16} fill="#fbbf24" />
-                      <Text style={styles.propertyRating}>{property.rating}</Text>
-                      <Text style={styles.propertyReviews}>({property.reviews})</Text>
+                      <View style={styles.propertyLocation}>
+                        <MapPin size={14} color="#94a3b8" />
+                        <Text style={styles.propertyLocationText}>
+                          {property.city}, {property.state}
+                        </Text>
+                      </View>
                     </View>
-                  ) : (
-                    <Text style={styles.newPropertyBadge}>New</Text>
-                  )}
-                  <Text style={styles.propertyPrice}>₹{property.price}<Text style={styles.priceUnit}>/night</Text></Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => toggleFavorite(property.id)}
+                    >
+                      <Heart
+                        size={22}
+                        color={
+                          favorites.includes(property.id)
+                            ? "#f87171"
+                            : "#cbd5e1"
+                        }
+                        fill={
+                          favorites.includes(property.id)
+                            ? "#f87171"
+                            : "transparent"
+                        }
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* DETAILS */}
+                  <View style={styles.propertyDetails}>
+                    <View style={styles.propertyTag}>
+                      <Text style={styles.propertyTagText}>
+                        {property.type === "hotel"
+                          ? "Hotel"
+                          : "House"}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.propertyDetailText}>
+                      {property.bedrooms} bed • {property.bathrooms} bath
+                    </Text>
+                  </View>
+
+                  {/* FOOTER */}
+                  <View style={styles.propertyFooter}>
+                    {property.rating > 0 ? (
+                      <View style={styles.ratingContainer}>
+                        <Star
+                          size={16}
+                          color="#fbbf24"
+                          fill="#fbbf24"
+                        />
+                        <Text style={styles.propertyRating}>
+                          {property.rating}
+                        </Text>
+                        <Text style={styles.propertyReviews}>
+                          ({property.reviews})
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.newPropertyBadge}>New</Text>
+                    )}
+
+                    <Text style={styles.propertyPrice}>
+                      ₹{property.price}
+                      <Text style={styles.priceUnit}>/night</Text>
+                    </Text>
+                  </View>
+                </BlurView>
+              </TouchableOpacity>
+            ))
           )}
         </View>
 
-        {/* Event Hosting CTA - Moved to bottom */}
-        <View style={styles.eventHostingBanner}>
+        {/* ======================================================
+            CTA BANNER — Event Hosting Neon Card
+        ====================================================== */}
+        <BlurView intensity={35} tint="dark" style={styles.eventHostingBanner}>
           <View style={styles.eventHostingContent}>
-            <Text style={styles.eventHostingTitle}>Need a Venue for Your Event?</Text>
-            <Text style={styles.eventHostingSubtitle}>
-              Book our premium halls and event spaces
+            <Text style={styles.eventHostingTitle}>
+              Need a Venue for Your Event?
             </Text>
-            <TouchableOpacity 
+
+            <Text style={styles.eventHostingSubtitle}>
+              Book premium halls and event spaces
+            </Text>
+
+            <TouchableOpacity
               style={styles.eventHostingButton}
-              onPress={() => router.push('/(user)/CreateEventScreen')}
-              activeOpacity={0.8}>
-              <Calendar size={18} color="#2563eb" />
-              <Text style={styles.eventHostingButtonText}>Browse Event Venues</Text>
+              activeOpacity={0.85}
+              onPress={() => router.push("/(user)/CreateEventScreen")}
+            >
+              <Calendar size={18} color="#60a5fa" />
+              <Text style={styles.eventHostingButtonText}>
+                Browse Event Venues
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </BlurView>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -661,195 +863,197 @@ export default function EnhancedUserHomeScreen() {
   );
 }
 
+/* ==========================================================
+   =====================  FULL STYLES  ======================
+   ========================================================== */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "transparent",
   },
+
+  /* BACKGROUND GLOW */
+  bgGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+
+  /* HEADER */
   header: {
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 20,
+    alignItems: "center",
   },
   greeting: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#a5b4fc",
   },
   username: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginTop: 2,
+    color: "#fff",
+    fontWeight: "bold",
   },
   profileButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
+
+  /* SEARCH */
   searchContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   searchBar: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     height: 52,
-    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   searchInput: {
     flex: 1,
+    marginLeft: 12,
     fontSize: 16,
-    color: '#1e293b',
+    color: "#f1f5f9",
   },
   filterButton: {
     width: 52,
     height: 52,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  scrollView: {
-    flex: 1,
-  },
+
+  scrollView: { flex: 1 },
   scrollContent: {
     paddingTop: 20,
+    paddingBottom: 40,
   },
+
+  /* QUICK BOOKING */
   quickBookingCard: {
     marginHorizontal: 20,
-    marginBottom: 28,
-    backgroundColor: '#fff',
+    marginBottom: 30,
     borderRadius: 20,
     padding: 20,
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    borderColor: "rgba(255,255,255,0.08)",
   },
-  quickBookingHeader: {
-    marginBottom: 20,
-  },
+  quickBookingHeader: { marginBottom: 20 },
   quickBookingTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
-    marginBottom: 6,
   },
   quickBookingTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#fff",
   },
   quickBookingSubtitle: {
+    color: "#cbd5e1",
     fontSize: 14,
-    color: '#64748b',
+    marginTop: 4,
   },
   quickBookingInputs: {
     gap: 12,
     marginBottom: 16,
   },
   dateInputRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   dateInput: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
     padding: 14,
-    gap: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "rgba(255,255,255,0.1)",
+    gap: 12,
   },
   guestsInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
     padding: 14,
-    gap: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "rgba(255,255,255,0.1)",
+    gap: 12,
   },
-  dateInputText: {
-    flex: 1,
-  },
+  dateInputText: { flex: 1 },
   dateLabel: {
-    fontSize: 11,
-    color: '#64748b',
+    color: "#94a3b8",
+    fontSize: 12,
     marginBottom: 2,
-    fontWeight: '500',
   },
   dateValue: {
+    color: "#f8fafc",
+    fontWeight: "600",
     fontSize: 14,
-    color: '#1e293b',
-    fontWeight: '600',
   },
   searchRoomsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2563eb',
-    paddingVertical: 16,
-    borderRadius: 12,
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 16,
+    borderRadius: 14,
   },
   searchRoomsButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  section: {
-    marginBottom: 28,
-  },
+
+  /* SECTIONS */
+  section: { marginBottom: 28 },
   sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionTitle: {
+    color: "#f8fafc",
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 4,
+    fontWeight: "bold",
   },
   sectionSubtitle: {
+    color: "#94a3b8",
     fontSize: 14,
-    color: '#64748b',
   },
   seeAllText: {
+    color: "#60a5fa",
+    fontWeight: "600",
     fontSize: 15,
-    fontWeight: '600',
-    color: '#2563eb',
   },
+
+  /* SPECIAL OFFERS */
   offersScroll: {
     paddingLeft: 20,
     paddingRight: 20,
@@ -859,120 +1063,108 @@ const styles = StyleSheet.create({
     width: 300,
     height: 360,
     borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   offerImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+    width: "100%",
+    height: "100%",
+    position: "absolute",
   },
   offerOverlay: {
     flex: 1,
+    justifyContent: "space-between",
     padding: 16,
-    justifyContent: 'space-between',
   },
   discountBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   discountText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   offerContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
   offerTitle: {
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
+    fontWeight: "bold",
+    marginBottom: 6,
   },
   offerLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 12,
   },
   offerLocationText: {
+    color: "#d1d5db",
     fontSize: 13,
-    color: '#64748b',
     flex: 1,
   },
   offerFooter: {
     marginBottom: 12,
-    paddingBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
   validUntilContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   validUntilText: {
+    color: "#cbd5e1",
     fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
   },
   bookNowButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: "#3b82f6",
     paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
+    borderRadius: 12,
+    alignItems: "center",
   },
   bookNowButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  amenitiesSection: {
-    marginHorizontal: 20,
-    marginBottom: 28,
-  },
+
+  /* AMENITIES */
+  amenitiesSection: { marginHorizontal: 20, marginBottom: 28 },
   amenitiesTitle: {
+    color: "#f1f5f9",
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
     marginBottom: 12,
   },
-  amenitiesScroll: {
-    gap: 10,
-  },
+  amenitiesScroll: { gap: 12 },
   amenityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#eff6ff',
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.08)",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#dbeafe',
+    borderColor: "rgba(255,255,255,0.12)",
   },
   amenityChipText: {
+    color: "#60a5fa",
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
+    fontWeight: "600",
   },
+
+  /* FEATURED HOTELS */
   horizontalScroll: {
     paddingLeft: 20,
     paddingRight: 20,
@@ -980,340 +1172,335 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     width: 280,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "rgba(255,255,255,0.08)",
   },
   featuredImage: {
-    width: '100%',
+    width: "100%",
     height: 180,
   },
+  featuredOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
   favoriteButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
-  featuredContent: {
-    padding: 16,
-    backgroundColor: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%)',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
+  featuredContent: {},
   featuredName: {
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 6,
+    fontWeight: "bold",
   },
   featuredLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
     gap: 4,
-    marginBottom: 12,
   },
   featuredLocationText: {
+    color: "#e2e8f0",
     fontSize: 14,
-    color: '#fff',
   },
   featuredFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+    alignItems: "center",
   },
   ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 10,
   },
   ratingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   featuredPrice: {
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
   },
+
+  /* EVENTS */
   eventCard: {
     width: 280,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   eventImage: {
-    width: '100%',
+    width: "100%",
     height: 160,
   },
   eventCategoryBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     left: 12,
-    backgroundColor: 'rgba(37, 99, 235, 0.9)',
+    backgroundColor: "rgba(59,130,246,0.9)",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   eventCategoryText: {
-    color: '#fff',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 12,
-    fontWeight: '600',
   },
   eventContent: {
     padding: 16,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   eventTitle: {
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
+    fontWeight: "bold",
+    marginBottom: 10,
   },
   eventLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
     gap: 6,
+    alignItems: "center",
     marginBottom: 12,
   },
   eventLocationText: {
+    color: "#cbd5e1",
     fontSize: 13,
-    color: '#64748b',
     flex: 1,
   },
   eventDetails: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
-    marginBottom: 16,
-    paddingBottom: 16,
+    paddingBottom: 14,
+    marginBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
   eventDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
     gap: 6,
+    alignItems: "center",
   },
   eventDetailText: {
+    color: "#cbd5e1",
     fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
   },
   eventFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   eventPriceLabel: {
-    fontSize: 11,
-    color: '#64748b',
-    marginBottom: 2,
+    color: "#94a3b8",
+    fontSize: 12,
   },
   eventPrice: {
+    color: "#22c55e",
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#16a34a',
+    fontWeight: "bold",
   },
   bookTicketButton: {
-    backgroundColor: '#2563eb',
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    backgroundColor: "#3b82f6",
+    borderRadius: 12,
   },
   bookTicketButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
+
+  /* PROPERTY LIST */
   propertyCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    flexDirection: "row",
     marginHorizontal: 20,
     marginBottom: 16,
-    overflow: 'hidden',
+    borderRadius: 20,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "rgba(255,255,255,0.1)",
   },
   propertyImage: {
     width: 120,
-    height: '100%',
+    height: "100%",
   },
   propertyContent: {
     flex: 1,
-    padding: 12,
+    padding: 14,
   },
   propertyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   propertyInfo: {
     flex: 1,
     marginRight: 8,
   },
   propertyName: {
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
     marginBottom: 4,
   },
   propertyLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
     gap: 4,
+    alignItems: "center",
   },
   propertyLocationText: {
+    color: "#cbd5e1",
     fontSize: 13,
-    color: '#64748b',
   },
   propertyDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
     gap: 8,
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: 10,
   },
   propertyTag: {
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(59,130,246,0.2)",
   },
   propertyTagText: {
+    color: "#60a5fa",
+    fontWeight: "600",
     fontSize: 11,
-    fontWeight: '600',
-    color: '#1e40af',
   },
   propertyDetailText: {
-    fontSize: 12,
-    color: '#64748b',
+    color: "#cbd5e1",
+    fontSize: 13,
   },
   propertyFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   propertyRating: {
+    color: "#fff",
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
   },
   propertyReviews: {
+    color: "#94a3b8",
     fontSize: 12,
-    color: '#64748b',
   },
   propertyPrice: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#16a34a',
+    fontWeight: "bold",
+    color: "#22c55e",
   },
   priceUnit: {
     fontSize: 12,
-    fontWeight: 'normal',
-    color: '#64748b',
+    color: "#94a3b8",
   },
   newPropertyBadge: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#16a34a',
-    backgroundColor: '#dcfce7',
+    color: "#22c55e",
+    backgroundColor: "rgba(34,197,94,0.25)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
+    fontWeight: "600",
+    fontSize: 12,
   },
+
+  /* CTA */
   eventHostingBanner: {
     marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
+    marginBottom: 30,
     padding: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  eventHostingContent: {
-    alignItems: 'center',
-  },
+  eventHostingContent: { alignItems: "center" },
   eventHostingTitle: {
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
     marginBottom: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
   eventHostingSubtitle: {
+    color: "#cbd5e1",
     fontSize: 14,
-    color: '#64748b',
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   eventHostingButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    gap: 10,
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    gap: 8,
-    borderWidth: 2,
-    borderColor: '#2563eb',
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "#3b82f6",
   },
   eventHostingButtonText: {
+    color: "#60a5fa",
+    fontWeight: "600",
     fontSize: 15,
-    fontWeight: '600',
-    color: '#2563eb',
   },
+
   bottomPadding: {
     height: 40,
   },
+
+  /* LOADING / EMPTY STATES */
   loadingContainer: {
     paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
+    color: "#94a3b8",
     fontSize: 16,
-    color: '#64748b',
-    fontWeight: '500',
   },
   emptyContainer: {
     paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
   },
   emptyText: {
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 6,
+    fontWeight: "600",
   },
   emptySubtext: {
+    color: "#94a3b8",
     fontSize: 14,
-    color: '#64748b',
   },
 });

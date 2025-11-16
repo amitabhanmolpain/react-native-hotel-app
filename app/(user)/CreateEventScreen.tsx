@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  Platform,
   Image,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -23,7 +23,9 @@ import {
   Home,
 } from 'lucide-react-native';
 
-// Mock venue data
+/* ==========================================
+   MOCK DATA
+   ========================================== */
 const availableVenues = [
   {
     id: '1',
@@ -85,18 +87,6 @@ const availableVenues = [
     image: 'https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=800',
     available: true,
   },
-  {
-    id: '6',
-    name: 'Executive Boardroom',
-    property: 'Grand Plaza Hotel',
-    location: 'Miami Beach, FL',
-    capacity: 50,
-    pricePerHour: 100,
-    type: 'Indoor',
-    amenities: ['Conference Table', 'Video Conferencing', 'Catering', 'Privacy'],
-    image: 'https://images.pexels.com/photos/827528/pexels-photo-827528.jpeg?auto=compress&cs=tinysrgb&w=800',
-    available: true,
-  },
 ];
 
 const eventTypes = [
@@ -107,9 +97,12 @@ const eventTypes = [
   { id: 'other', label: 'Other', color: '#10b981' },
 ];
 
+/* ==========================================
+   MAIN SCREEN
+   ========================================== */
 export default function CreateEventScreen() {
   const router = useRouter();
-  const [step, setStep] = useState(1); // 1: Event Details, 2: Select Venue, 3: Review
+  const [step, setStep] = useState(1);
   const [selectedEventType, setSelectedEventType] = useState('');
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -119,88 +112,174 @@ export default function CreateEventScreen() {
   const [selectedVenue, setSelectedVenue] = useState<any>(null);
   const [filterType, setFilterType] = useState('all');
 
-  const filteredVenues = filterType === 'all' 
-    ? availableVenues 
-    : availableVenues.filter(v => v.type.toLowerCase() === filterType);
+  const filteredVenues =
+    filterType === 'all'
+      ? availableVenues
+      : availableVenues.filter(v => v.type.toLowerCase() === filterType);
 
-  const canProceedToStep2 = eventName && selectedEventType && eventDate && eventTime && duration && guestCount;
+  const canProceedToStep2 =
+    eventName && selectedEventType && eventDate && eventTime && duration && guestCount;
+
   const canProceedToStep3 = selectedVenue;
 
-  const totalCost = selectedVenue ? parseFloat(duration) * selectedVenue.pricePerHour : 0;
+  const totalCost = selectedVenue
+    ? parseFloat(duration) * selectedVenue.pricePerHour
+    : 0;
 
+  /* ==========================================
+     HEADER (Neon Glass)
+     ========================================== */
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity
+        style={styles.headerBackButton}
+        onPress={() => router.back()}
+        activeOpacity={0.7}>
+        <ArrowLeft color="#93c5fd" size={24} />
+      </TouchableOpacity>
+
+      <Text style={styles.headerTitle}>Create Event</Text>
+
+      <View style={{ width: 40 }} />
+    </View>
+  );
+
+  /* ==========================================
+     STEP INDICATOR (Neon)
+     ========================================== */
   const renderStepIndicator = () => (
     <View style={styles.stepIndicator}>
+      {/* Step 1 */}
       <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, step >= 1 && styles.stepCircleActive]}>
-          {step > 1 ? <Check size={16} color="#fff" /> : <Text style={styles.stepNumber}>1</Text>}
+        <View
+          style={[
+            styles.stepCircle,
+            step >= 1 && styles.stepCircleActive,
+          ]}
+        >
+          {step > 1 ? (
+            <Check size={16} color="#fff" />
+          ) : (
+            <Text style={styles.stepNumber}>1</Text>
+          )}
         </View>
-        <Text style={[styles.stepLabel, step >= 1 && styles.stepLabelActive]}>Details</Text>
+        <Text
+          style={[
+            styles.stepLabel,
+            step >= 1 && styles.stepLabelActive,
+          ]}
+        >
+          Details
+        </Text>
       </View>
+
       <View style={styles.stepLine} />
+
+      {/* Step 2 */}
       <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, step >= 2 && styles.stepCircleActive]}>
-          {step > 2 ? <Check size={16} color="#fff" /> : <Text style={styles.stepNumber}>2</Text>}
+        <View
+          style={[
+            styles.stepCircle,
+            step >= 2 && styles.stepCircleActive,
+          ]}
+        >
+          {step > 2 ? (
+            <Check size={16} color="#fff" />
+          ) : (
+            <Text style={styles.stepNumber}>2</Text>
+          )}
         </View>
-        <Text style={[styles.stepLabel, step >= 2 && styles.stepLabelActive]}>Venue</Text>
+        <Text
+          style={[
+            styles.stepLabel,
+            step >= 2 && styles.stepLabelActive,
+          ]}
+        >
+          Venue
+        </Text>
       </View>
+
       <View style={styles.stepLine} />
+
+      {/* Step 3 */}
       <View style={styles.stepItem}>
-        <View style={[styles.stepCircle, step >= 3 && styles.stepCircleActive]}>
+        <View
+          style={[
+            styles.stepCircle,
+            step >= 3 && styles.stepCircleActive,
+          ]}
+        >
           <Text style={styles.stepNumber}>3</Text>
         </View>
-        <Text style={[styles.stepLabel, step >= 3 && styles.stepLabelActive]}>Review</Text>
+        <Text
+          style={[
+            styles.stepLabel,
+            step >= 3 && styles.stepLabelActive,
+          ]}
+        >
+          Review
+        </Text>
       </View>
     </View>
   );
 
+  /* ==========================================
+     PART 2 — STEP 1: EVENT DETAILS (Neon Glass UI)
+     ========================================== */
   const renderStep1 = () => (
     <View style={styles.stepContent}>
-      <View style={styles.formSection}>
-        <Text style={styles.formSectionTitle}>Event Information</Text>
-        
+      <View style={styles.formCard}>
+        <Text style={styles.formTitle}>Event Information</Text>
+
+        {/* Event Name */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Event Name *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., Annual Gala Dinner"
-            placeholderTextColor="#94a3b8"
-            value={eventName}
-            onChangeText={setEventName}
-          />
+          <View style={styles.inputGlassRow}>
+            <TextInput
+              style={styles.inputGlass}
+              placeholder="e.g., Annual Gala Dinner"
+              placeholderTextColor="#94a3b8"
+              value={eventName}
+              onChangeText={setEventName}
+            />
+          </View>
         </View>
 
+        {/* Event Type Chips */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Event Type *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeScroll}>
-            {eventTypes.map((type) => (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.typeChip,
-                  selectedEventType === type.id && { 
-                    backgroundColor: type.color,
-                    borderColor: type.color 
-                  },
-                ]}
-                onPress={() => setSelectedEventType(type.id)}
-                activeOpacity={0.7}>
-                <Text
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.typeScroll}
+          >
+            {eventTypes.map((type) => {
+              const selected = selectedEventType === type.id;
+              return (
+                <TouchableOpacity
+                  key={type.id}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedEventType(type.id)}
                   style={[
-                    styles.typeChipText,
-                    selectedEventType === type.id && styles.typeChipTextActive,
-                  ]}>
-                  {type.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                    styles.typeChipNeon,
+                    selected && { backgroundColor: type.color, borderColor: type.color },
+                  ]}
+                >
+                  <Text style={[styles.typeChipText, selected && styles.typeChipTextActive]}>
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
-        <View style={styles.inputRow}>
+        {/* Date & Time Row */}
+        <View style={styles.row}>
           <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
             <Text style={styles.inputLabel}>Date *</Text>
-            <View style={styles.inputWithIcon}>
-              <Calendar size={20} color="#64748b" />
+            <TouchableOpacity activeOpacity={0.8} style={styles.inputWithIconGlass}>
+              <Calendar size={18} color="#9fb7ff" />
               <TextInput
                 style={styles.inputWithIconText}
                 placeholder="YYYY-MM-DD"
@@ -208,13 +287,13 @@ export default function CreateEventScreen() {
                 value={eventDate}
                 onChangeText={setEventDate}
               />
-            </View>
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.inputLabel}>Time *</Text>
-            <View style={styles.inputWithIcon}>
-              <Clock size={20} color="#64748b" />
+            <TouchableOpacity activeOpacity={0.8} style={styles.inputWithIconGlass}>
+              <Clock size={18} color="#9fb7ff" />
               <TextInput
                 style={styles.inputWithIconText}
                 placeholder="HH:MM"
@@ -222,15 +301,16 @@ export default function CreateEventScreen() {
                 value={eventTime}
                 onChangeText={setEventTime}
               />
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.inputRow}>
+        {/* Duration & Guests Row */}
+        <View style={styles.row}>
           <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
             <Text style={styles.inputLabel}>Duration (hours) *</Text>
             <TextInput
-              style={styles.input}
+              style={styles.inputGlass}
               placeholder="e.g., 4"
               placeholderTextColor="#94a3b8"
               keyboardType="numeric"
@@ -241,8 +321,8 @@ export default function CreateEventScreen() {
 
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.inputLabel}>Expected Guests *</Text>
-            <View style={styles.inputWithIcon}>
-              <Users size={20} color="#64748b" />
+            <View style={styles.inputWithIconGlass}>
+              <Users size={18} color="#9fb7ff" />
               <TextInput
                 style={styles.inputWithIconText}
                 placeholder="e.g., 100"
@@ -256,261 +336,307 @@ export default function CreateEventScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.nextButton, !canProceedToStep2 && styles.nextButtonDisabled]}
-        onPress={() => canProceedToStep2 && setStep(2)}
-        disabled={!canProceedToStep2}
-        activeOpacity={0.8}>
-        <Text style={styles.nextButtonText}>Continue to Venue Selection</Text>
-        <ChevronRight size={20} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View style={styles.stepContent}>
-      <View style={styles.filterRow}>
-        <TouchableOpacity
-          style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
-          onPress={() => setFilterType('all')}
-          activeOpacity={0.7}>
-          <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>
-            All Venues
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, filterType === 'indoor' && styles.filterChipActive]}
-          onPress={() => setFilterType('indoor')}
-          activeOpacity={0.7}>
-          <Text style={[styles.filterChipText, filterType === 'indoor' && styles.filterChipTextActive]}>
-            Indoor
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, filterType === 'outdoor' && styles.filterChipActive]}
-          onPress={() => setFilterType('outdoor')}
-          activeOpacity={0.7}>
-          <Text style={[styles.filterChipText, filterType === 'outdoor' && styles.filterChipTextActive]}>
-            Outdoor
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.venuesContainer}>
-        <Text style={styles.venuesTitle}>Available Venues ({filteredVenues.length})</Text>
-        {filteredVenues.map((venue) => (
-          <TouchableOpacity
-            key={venue.id}
-            style={[
-              styles.venueCard,
-              selectedVenue?.id === venue.id && styles.venueCardSelected,
-              !venue.available && styles.venueCardDisabled,
-            ]}
-            onPress={() => venue.available && setSelectedVenue(venue)}
-            disabled={!venue.available}
-            activeOpacity={0.7}>
-            <Image source={{ uri: venue.image }} style={styles.venueImage} />
-            
-            {selectedVenue?.id === venue.id && (
-              <View style={styles.selectedBadge}>
-                <Check size={16} color="#fff" />
-              </View>
-            )}
-
-            {!venue.available && (
-              <View style={styles.unavailableBadge}>
-                <Text style={styles.unavailableText}>Unavailable</Text>
-              </View>
-            )}
-
-            <View style={styles.venueContent}>
-              <View style={styles.venueHeader}>
-                <Text style={styles.venueName}>{venue.name}</Text>
-                <View style={[styles.venueTypeBadge, { backgroundColor: venue.type === 'Indoor' ? '#dbeafe' : '#dcfce7' }]}>
-                  <Text style={[styles.venueTypeText, { color: venue.type === 'Indoor' ? '#1e40af' : '#15803d' }]}>
-                    {venue.type}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.venueLocation}>
-                <Home size={14} color="#64748b" />
-                <Text style={styles.venueLocationText}>{venue.property}</Text>
-              </View>
-
-              <View style={styles.venueLocation}>
-                <MapPin size={14} color="#64748b" />
-                <Text style={styles.venueLocationText}>{venue.location}</Text>
-              </View>
-
-              <View style={styles.venueDetails}>
-                <View style={styles.venueDetailItem}>
-                  <Users size={16} color="#64748b" />
-                  <Text style={styles.venueDetailText}>Up to {venue.capacity} guests</Text>
-                </View>
-                <View style={styles.venueDetailItem}>
-                  <DollarSign size={16} color="#16a34a" />
-                  <Text style={styles.venuePriceText}>₹{venue.pricePerHour}/hour</Text>
-                </View>
-              </View>
-
-              <View style={styles.amenitiesContainer}>
-                {venue.amenities.slice(0, 3).map((amenity, index) => (
-                  <View key={index} style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>{amenity}</Text>
-                  </View>
-                ))}
-                {venue.amenities.length > 3 && (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>+{venue.amenities.length - 3}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
+      {/* Continue Button */}
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setStep(1)}
-          activeOpacity={0.7}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.nextButton, styles.nextButtonFlex, !canProceedToStep3 && styles.nextButtonDisabled]}
-          onPress={() => canProceedToStep3 && setStep(3)}
-          disabled={!canProceedToStep3}
-          activeOpacity={0.8}>
-          <Text style={styles.nextButtonText}>Review Booking</Text>
+          style={[styles.nextButton, !canProceedToStep2 && styles.nextButtonDisabled]}
+          onPress={() => canProceedToStep2 && setStep(2)}
+          disabled={!canProceedToStep2}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.nextButtonText}>Continue to Venue Selection</Text>
           <ChevronRight size={20} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
   );
-
-  const renderStep3 = () => (
+  /* ==========================================
+     PART 3 — STEP 2: VENUE SELECTION (Neon Cards)
+     ========================================== */
+  const renderStep2 = () => (
     <View style={styles.stepContent}>
-      <View style={styles.reviewCard}>
-        <Text style={styles.reviewTitle}>Booking Summary</Text>
-        
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>Event Details</Text>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Event Name:</Text>
-            <Text style={styles.reviewValue}>{eventName}</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Type:</Text>
-            <View style={[styles.typeChipSmall, { 
-              backgroundColor: eventTypes.find(t => t.id === selectedEventType)?.color 
-            }]}>
-              <Text style={styles.typeChipSmallText}>
-                {eventTypes.find(t => t.id === selectedEventType)?.label}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Date & Time:</Text>
-            <Text style={styles.reviewValue}>{eventDate} at {eventTime}</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Duration:</Text>
-            <Text style={styles.reviewValue}>{duration} hours</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Expected Guests:</Text>
-            <Text style={styles.reviewValue}>{guestCount} people</Text>
-          </View>
-        </View>
+      {/* Filters */}
+      <View style={styles.filterRowNeon}>
+        <TouchableOpacity
+          style={[styles.filterChipNeon, filterType === 'all' && styles.filterChipNeonActive]}
+          onPress={() => setFilterType('all')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.filterChipNeonText, filterType === 'all' && styles.filterChipNeonTextActive]}>All Venues</Text>
+        </TouchableOpacity>
 
-        <View style={styles.reviewDivider} />
+        <TouchableOpacity
+          style={[styles.filterChipNeon, filterType === 'indoor' && styles.filterChipNeonActive]}
+          onPress={() => setFilterType('indoor')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.filterChipNeonText, filterType === 'indoor' && styles.filterChipNeonTextActive]}>Indoor</Text>
+        </TouchableOpacity>
 
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>Venue Information</Text>
-          <Image source={{ uri: selectedVenue?.image }} style={styles.reviewVenueImage} />
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Venue:</Text>
-            <Text style={styles.reviewValue}>{selectedVenue?.name}</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Property:</Text>
-            <Text style={styles.reviewValue}>{selectedVenue?.property}</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Location:</Text>
-            <Text style={styles.reviewValue}>{selectedVenue?.location}</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Capacity:</Text>
-            <Text style={styles.reviewValue}>Up to {selectedVenue?.capacity} guests</Text>
-          </View>
-        </View>
-
-        <View style={styles.reviewDivider} />
-
-        <View style={styles.reviewSection}>
-          <Text style={styles.reviewSectionTitle}>Cost Breakdown</Text>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Venue Rate:</Text>
-            <Text style={styles.reviewValue}>₹{selectedVenue?.pricePerHour}/hour</Text>
-          </View>
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewLabel}>Duration:</Text>
-            <Text style={styles.reviewValue}>{duration} hours</Text>
-          </View>
-          <View style={styles.reviewDivider} />
-          <View style={styles.reviewRow}>
-            <Text style={styles.reviewTotalLabel}>Total Cost:</Text>
-            <Text style={styles.reviewTotalValue}>₹{totalCost.toFixed(2)}</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.filterChipNeon, filterType === 'outdoor' && styles.filterChipNeonActive]}
+          onPress={() => setFilterType('outdoor')}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.filterChipNeonText, filterType === 'outdoor' && styles.filterChipNeonTextActive]}>Outdoor</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.buttonRow}>
+      {/* Venues list */}
+      <View style={styles.venuesContainer}>
+        <Text style={styles.venuesTitle}>Available Venues ({filteredVenues.length})</Text>
+
+        {filteredVenues.map((venue) => {
+          const selected = selectedVenue?.id === venue.id;
+          return (
+            <TouchableOpacity
+              key={venue.id}
+              style={[
+                styles.venueCardNeon,
+                selected && styles.venueCardNeonSelected,
+                !venue.available && styles.venueCardDisabled,
+              ]}
+              onPress={() => venue.available && setSelectedVenue(venue)}
+              disabled={!venue.available}
+              activeOpacity={0.85}
+            >
+              {/* Background image */}
+              <Image source={{ uri: venue.image }} style={styles.venueImageNeon} />
+
+              {/* Dark glass overlay */}
+              <View style={styles.venueOverlay} />
+
+              {/* Selected badge */}
+              {selected && (
+                <View style={styles.selectedBadgeNeon}>
+                  <Check size={16} color="#0b1220" />
+                </View>
+              )}
+
+              {/* Unavailable badge */}
+              {!venue.available && (
+                <View style={styles.unavailableBadgeNeon}>
+                  <Text style={styles.unavailableTextNeon}>Unavailable</Text>
+                </View>
+              )}
+
+              {/* Content */}
+              <View style={styles.venueContentNeon}>
+                <View style={styles.venueHeaderNeon}>
+                  <Text style={styles.venueNameNeon} numberOfLines={1}>{venue.name}</Text>
+
+                  <View style={[
+                    styles.venueTypeBadgeNeon,
+                    { backgroundColor: venue.type === 'Indoor' ? 'rgba(147,197,253,0.12)' : 'rgba(220,253,231,0.12)' }
+                  ]}>
+                    <Text style={[
+                      styles.venueTypeTextNeon,
+                      { color: venue.type === 'Indoor' ? '#93c5fd' : '#86efac' }
+                    ]}>
+                      {venue.type}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.venueLocationNeon}>
+                  <Home size={14} color="#94a3b8" />
+                  <Text style={styles.venueLocationTextNeon}>{venue.property}</Text>
+                </View>
+
+                <View style={styles.venueLocationNeon}>
+                  <MapPin size={14} color="#94a3b8" />
+                  <Text style={styles.venueLocationTextNeon}>{venue.location}</Text>
+                </View>
+
+                <View style={styles.venueDetailsNeon}>
+                  <View style={styles.venueDetailItemNeon}>
+                    <Users size={16} color="#94a3b8" />
+                    <Text style={styles.venueDetailTextNeon}>Up to {venue.capacity} guests</Text>
+                  </View>
+
+                  <View style={styles.venueDetailItemNeon}>
+                    <DollarSign size={16} color="#4ade80" />
+                    <Text style={styles.venuePriceTextNeon}>₹{venue.pricePerHour}/hour</Text>
+                  </View>
+                </View>
+
+                <View style={styles.amenitiesContainerNeon}>
+                  {venue.amenities.slice(0, 3).map((amenity, idx) => (
+                    <View key={idx} style={styles.amenityChipNeon}>
+                      <Text style={styles.amenityTextNeon}>{amenity}</Text>
+                    </View>
+                  ))}
+                  {venue.amenities.length > 3 && (
+                    <View style={styles.amenityChipNeon}>
+                      <Text style={styles.amenityTextNeon}>+{venue.amenities.length - 3}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Navigation Buttons */}
+      <View style={styles.buttonRowNeon}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setStep(2)}
-          activeOpacity={0.7}>
-          <Text style={styles.backButtonText}>Back</Text>
+          style={styles.backButtonNeon}
+          onPress={() => setStep(1)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.backButtonTextNeon}>Back</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.confirmButton, styles.nextButtonFlex]}
-          onPress={() => {
-            // Handle booking confirmation
-            alert('Event booking confirmed!');
-          }}
-          activeOpacity={0.8}>
-          <Sparkles size={20} color="#fff" />
-          <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+          style={[styles.nextButtonNeon, !canProceedToStep3 && styles.nextButtonDisabledNeon]}
+          onPress={() => canProceedToStep3 && setStep(3)}
+          disabled={!canProceedToStep3}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.nextButtonTextNeon}>Review Booking</Text>
+          <ChevronRight size={20} color="#0b1220" />
         </TouchableOpacity>
       </View>
     </View>
   );
+  /* ==========================================
+     PART 4 — STEP 3: REVIEW (Neon Glass UI)
+     ========================================== */
+  const renderStep3 = () => (
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+    <View style={styles.stepContent}>
+      <View style={styles.reviewCardNeon}>
+        <Text style={styles.reviewTitleNeon}>Booking Summary</Text>
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerBackButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}>
-          <ArrowLeft color="#1e293b" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Event</Text>
-        <View style={styles.headerBackButton} />
+        {/* Event Details */}
+        <View style={styles.reviewSectionNeon}>
+          <Text style={styles.reviewSectionTitleNeon}>Event Details</Text>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Event Name:</Text>
+            <Text style={styles.reviewValueNeon}>{eventName}</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Type:</Text>
+            <View style={[
+              styles.typeChipSmallNeon,
+              { backgroundColor: eventTypes.find(t => t.id === selectedEventType)?.color }
+            ]}>
+              <Text style={styles.typeChipSmallTextNeon}>
+                {eventTypes.find(t => t.id === selectedEventType)?.label}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Date & Time:</Text>
+            <Text style={styles.reviewValueNeon}>{eventDate} at {eventTime}</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Duration:</Text>
+            <Text style={styles.reviewValueNeon}>{duration} hours</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Guests:</Text>
+            <Text style={styles.reviewValueNeon}>{guestCount} people</Text>
+          </View>
+        </View>
+
+        <View style={styles.reviewDividerNeon} />
+
+        {/* Venue */}
+        <View style={styles.reviewSectionNeon}>
+          <Text style={styles.reviewSectionTitleNeon}>Venue Information</Text>
+
+          <Image source={{ uri: selectedVenue?.image }} style={styles.reviewVenueImageNeon} />
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Venue:</Text>
+            <Text style={styles.reviewValueNeon}>{selectedVenue?.name}</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Property:</Text>
+            <Text style={styles.reviewValueNeon}>{selectedVenue?.property}</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Location:</Text>
+            <Text style={styles.reviewValueNeon}>{selectedVenue?.location}</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Capacity:</Text>
+            <Text style={styles.reviewValueNeon}>Up to {selectedVenue?.capacity} guests</Text>
+          </View>
+        </View>
+
+        <View style={styles.reviewDividerNeon} />
+
+        {/* Pricing */}
+        <View style={styles.reviewSectionNeon}>
+          <Text style={styles.reviewSectionTitleNeon}>Cost Breakdown</Text>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Venue Rate:</Text>
+            <Text style={styles.reviewValueNeon}>₹{selectedVenue?.pricePerHour}/hour</Text>
+          </View>
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewLabelNeon}>Duration:</Text>
+            <Text style={styles.reviewValueNeon}>{duration} hours</Text>
+          </View>
+
+          <View style={styles.reviewDividerNeon} />
+
+          <View style={styles.reviewRowNeon}>
+            <Text style={styles.reviewTotalLabelNeon}>Total Cost:</Text>
+            <Text style={styles.reviewTotalValueNeon}>₹{totalCost.toFixed(2)}</Text>
+          </View>
+        </View>
       </View>
 
-      {renderStepIndicator()}
+      {/* Bottom Buttons */}
+      <View style={styles.buttonRowNeon}>
+        <TouchableOpacity
+          style={styles.backButtonNeon}
+          onPress={() => setStep(2)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.backButtonTextNeon}>Back</Text>
+        </TouchableOpacity>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        <TouchableOpacity
+          style={styles.confirmButtonNeon}
+          onPress={() => alert("Event booking confirmed!")}
+          activeOpacity={0.85}
+        >
+          <Sparkles size={20} color="#0b1220" />
+          <Text style={styles.confirmButtonTextNeon}>Confirm Booking</Text>
+        </TouchableOpacity>
+      </View>
+      </View>
+      </ScrollView>
+  );
+
+  /* ==========================================
+     MAIN RETURN
+     ========================================== */
+  return (
+    <View style={styles.container}>
+      {renderHeader()}
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {renderStepIndicator()}
+
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
+
         <View style={styles.bottomPadding} />
       </ScrollView>
     </View>
@@ -520,440 +646,408 @@ export default function CreateEventScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#0b1220",
   },
+
+  /* HEADER */
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingBottom: 14,
+    backgroundColor: "rgba(17, 25, 40, 0.65)",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "rgba(255,255,255,0.06)",
+    backdropFilter: "blur(20px)",
   },
   headerBackButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#e2e8f0",
   },
+
+  /* STEP INDICATOR */
   stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+    backgroundColor: "rgba(17,25,40,0.6)",
   },
-  stepItem: {
-    alignItems: 'center',
-  },
+  stepItem: { alignItems: "center" },
   stepCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(51,65,85,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
   },
   stepCircleActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: "#3b82f6",
+    shadowColor: "#3b82f6",
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
   },
   stepNumber: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748b',
+    color: "#cbd5e1",
+    fontWeight: "700",
+    fontSize: 15,
   },
-  stepLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748b',
-  },
-  stepLabelActive: {
-    color: '#2563eb',
-  },
+  stepLabel: { fontSize: 12, color: "#64748b" },
+  stepLabelActive: { color: "#3b82f6", fontWeight: "600" },
   stepLine: {
     width: 60,
     height: 2,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "rgba(255,255,255,0.08)",
     marginHorizontal: 8,
-    marginBottom: 30,
+    marginBottom: 26,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  stepContent: {
-    flex: 1,
-  },
-  formSection: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  formSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 20 },
+  stepContent: { marginBottom: 30 },
+
+  buttonRow: {
+    flexDirection: "row",
     gap: 12,
+    marginBottom: 20,
+  },
+
+  /* FORM CARD (STEP 1) */
+  formCard: {
+    backgroundColor: "rgba(17,25,40,0.55)",
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    marginBottom: 24,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#e2e8f0",
+    marginBottom: 20,
+  },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: {
+    color: "#94a3b8",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+
+  /* GLASS INPUT */
+  inputGlass: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
+    padding: 14,
+    borderRadius: 12,
+    color: "#e2e8f0",
+    fontSize: 16,
+  },
+  inputGlassRow: { flexDirection: "row", alignItems: "center" },
+
+  inputWithIconGlass: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.09)",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    gap: 10,
   },
   inputWithIconText: {
     flex: 1,
+    color: "#e2e8f0",
     fontSize: 16,
-    color: '#1e293b',
   },
-  inputRow: {
-    flexDirection: 'row',
-  },
-  typeScroll: {
-    marginTop: 8,
-  },
-  typeChip: {
-    paddingHorizontal: 20,
+
+  row: { flexDirection: "row" },
+
+  /* TYPE CHIPS */
+  typeScroll: { paddingVertical: 6 },
+  typeChipNeon: {
     paddingVertical: 10,
+    paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.1)",
     marginRight: 10,
   },
-  typeChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  typeChipTextActive: {
-    color: '#fff',
-  },
+  typeChipText: { color: "#94a3b8", fontWeight: "600" },
+  typeChipTextActive: { color: "#0b1220" },
+
+  /* BUTTONS */
   nextButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
+    flexDirection: "row",
+    backgroundColor: "#3b82f6",
     paddingVertical: 16,
-    gap: 8,
-  },
-  nextButtonFlex: {
-    flex: 1,
-  },
-  nextButtonDisabled: {
-    backgroundColor: '#cbd5e1',
-  },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  filterRow: {
-    flexDirection: 'row',
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
-    marginBottom: 20,
+    shadowColor: "#3b82f6",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
   },
-  filterChip: {
-    paddingHorizontal: 20,
+  nextButtonDisabled: { backgroundColor: "#1e293b" },
+  nextButtonText: { fontSize: 16, fontWeight: "700", color: "#0b1220" },
+
+  /* VENUE CARD (STEP 2) */
+
+  filterRowNeon: {
+    flexDirection: "row",
+    marginBottom: 20,
+    gap: 12,
+  },
+  filterChipNeon: {
     paddingVertical: 10,
+    paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.1)",
   },
-  filterChipActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
+  filterChipNeonActive: {
+    backgroundColor: "#3b82f6",
+    borderColor: "#3b82f6",
   },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
+  filterChipNeonText: { color: "#94a3b8", fontWeight: "600" },
+  filterChipNeonTextActive: { color: "#0b1220" },
+
+  venuesContainer: { marginBottom: 20 },
+  venuesTitle: { color: "#e2e8f0", fontSize: 18, fontWeight: "700", marginBottom: 14 },
+
+  venueCardNeon: {
+    borderRadius: 18,
+    overflow: "hidden",
+    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(17,25,40,0.35)",
   },
-  filterChipTextActive: {
-    color: '#fff',
+  venueCardNeonSelected: {
+    borderColor: "#3b82f6",
+    shadowColor: "#3b82f6",
+    shadowOpacity: 0.7,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  venuesContainer: {
-    marginBottom: 20,
+  venueCardDisabled: { opacity: 0.4 },
+
+  venueImageNeon: {
+    width: "100%",
+    height: 170,
   },
-  venuesTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
+  venueOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
-  venueCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-  },
-  venueCardSelected: {
-    borderColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  venueCardDisabled: {
-    opacity: 0.5,
-  },
-  venueImage: {
-    width: '100%',
-    height: 180,
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
+
+  selectedBadgeNeon: {
+    position: "absolute",
+    top: 14,
+    right: 14,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2563eb',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#3b82f6",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  unavailableBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
+  unavailableBadgeNeon: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    backgroundColor: "#ef4444",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    borderRadius: 10,
   },
-  unavailableText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  venueContent: {
-    padding: 16,
-  },
-  venueHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  unavailableTextNeon: { color: "#fff", fontSize: 12, fontWeight: "700" },
+
+  venueContentNeon: { padding: 16 },
+  venueHeaderNeon: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
-  venueName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    flex: 1,
-    marginRight: 12,
-  },
-  venueTypeBadge: {
-    paddingHorizontal: 10,
+  venueNameNeon: { color: "#e2e8f0", fontSize: 18, fontWeight: "700" },
+
+  venueTypeBadgeNeon: {
     paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 8,
   },
-  venueTypeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  venueLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  venueTypeTextNeon: { fontSize: 11, fontWeight: "700" },
+
+  venueLocationNeon: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  venueLocationText: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  venueDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  venueLocationTextNeon: { color: "#94a3b8", fontSize: 14 },
+
+  venueDetailsNeon: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 12,
     marginBottom: 12,
   },
-  venueDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  venueDetailItemNeon: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
-  venueDetailText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  venuePriceText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#16a34a',
-  },
-  amenitiesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  venueDetailTextNeon: { color: "#94a3b8", fontSize: 14 },
+  venuePriceTextNeon: { color: "#4ade80", fontSize: 16, fontWeight: "700" },
+
+  amenitiesContainerNeon: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
-  amenityChip: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 10,
+  amenityChipNeon: {
+    backgroundColor: "rgba(255,255,255,0.08)",
     paddingVertical: 6,
+    paddingHorizontal: 10,
     borderRadius: 8,
   },
-  amenityText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '500',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  backButton: {
+  amenityTextNeon: { color: "#cbd5e1", fontSize: 12 },
+
+  buttonRowNeon: { flexDirection: "row", gap: 12, marginTop: 10 },
+  backButtonNeon: {
     flex: 1,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.1)",
     paddingVertical: 16,
     borderRadius: 12,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  reviewCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  reviewTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 20,
-  },
-  reviewSection: {
-    marginBottom: 16,
-  },
-  reviewSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 12,
-  },
-  reviewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  reviewLabel: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  reviewValue: {
-    fontSize: 14,
-    color: '#1e293b',
-    fontWeight: '600',
-    textAlign: 'right',
+  backButtonTextNeon: { color: "#94a3b8", fontSize: 16, fontWeight: "600" },
+
+  nextButtonNeon: {
     flex: 1,
-    marginLeft: 16,
+    backgroundColor: "#3b82f6",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
   },
-  typeChipSmall: {
-    paddingHorizontal: 10,
+  nextButtonDisabledNeon: {
+    backgroundColor: "#1e293b",
+  },
+  nextButtonTextNeon: { color: "#0b1220", fontSize: 16, fontWeight: "700" },
+
+  /* REVIEW STEP (STEP 3) */
+
+  reviewCardNeon: {
+    backgroundColor: "rgba(17,25,40,0.6)",
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    marginBottom: 24,
+  },
+  reviewTitleNeon: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#e2e8f0",
+    marginBottom: 20,
+  },
+  reviewSectionNeon: { marginBottom: 18 },
+  reviewSectionTitleNeon: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#e2e8f0",
+    marginBottom: 12,
+  },
+  reviewRowNeon: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  reviewLabelNeon: {
+    fontSize: 14,
+    color: "#94a3b8",
+    fontWeight: "500",
+  },
+  reviewValueNeon: {
+    color: "#e2e8f0",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "right",
+    flex: 1,
+    marginLeft: 20,
+  },
+
+  typeChipSmallNeon: {
     paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 8,
   },
-  typeChipSmallText: {
+  typeChipSmallTextNeon: {
+    color: "#0b1220",
+    fontWeight: "700",
     fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
   },
-  reviewDivider: {
+
+  reviewDividerNeon: {
     height: 1,
-    backgroundColor: '#e2e8f0',
-    marginVertical: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginVertical: 18,
   },
-  reviewVenueImage: {
-    width: '100%',
+  reviewVenueImageNeon: {
+    width: "100%",
     height: 150,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  reviewTotalLabel: {
+
+  reviewTotalLabelNeon: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#e2e8f0",
   },
-  reviewTotalValue: {
+  reviewTotalValueNeon: {
+    color: "#4ade80",
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#16a34a',
+    fontWeight: "800",
   },
-  confirmButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
+
+  confirmButtonNeon: {
+    flex: 1,
+    backgroundColor: "#4ade80",
     paddingVertical: 16,
-    gap: 8,
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
   },
-  confirmButtonText: {
-    color: '#fff',
+  confirmButtonTextNeon: {
+    color: "#0b1220",
+    fontWeight: "800",
     fontSize: 16,
-    fontWeight: '600',
   },
-  bottomPadding: {
-    height: 40,
-  },
+
+  bottomPadding: { height: 40 },
 });
+
